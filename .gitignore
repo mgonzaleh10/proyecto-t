@@ -1,0 +1,15 @@
+# node_modules en cualquier subcarpeta
+**/node_modules
+
+# archivos de entorno
+.env
+.env.*
+
+# build de React
+/frontend/build
+
+# logs, sistema
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
