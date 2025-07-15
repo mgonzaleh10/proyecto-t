@@ -3,7 +3,7 @@ const db = require('../config/db');
 // Nombres de días para mapear fechas
 const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
 
-// Reglas por tipo de contrato (mismo que en el generador)
+// Reglas por tipo de contrato
 const REGLAS = {
   45: { diasSemana: 5, domingosPorMes: 2 },
   30: { diasSemana: 5, domingosPorMes: 2 },
@@ -14,7 +14,7 @@ const REGLAS = {
 // Convierte "HH:MM" o "HH:MM:SS" a minutos
 function parseTime(t) {
   const [h, m] = t.split(':').map(Number);
-  return h*60 + m;
+  return h * 60 + m;
 }
 
 // Calcula horas trabajadas, restando 1h de colación
@@ -43,49 +43,46 @@ function dentroDisponibilidad(turno, disp) {
 
 /**
  * Comprueba todas las reglas para ver si `usuario` podría tomar `turno`
- * @param {*} usuario  { id, horas_contrato, puede_cerrar }
- * @param {*} turno    { fecha, hora_inicio, hora_fin }
- * @param {*} dispMap  Map(usuario_id → { dia_semana → disponibilidad })
- * @param {*} beneMap  Map(usuario_id → Set<YYYY-MM-DD> de beneficios)
- * @param {*} shifts   Array de turnos ya asignados a este usuario en la semana (sin incluir el que va a soltar)
  */
 function puedeAsignarShift(usuario, turno, dispMap, beneMap, shifts) {
+  // protección: si usuario indefinido, devolvemos false
+  if (!usuario) return false;
+
   const diaNombre = DIAS[new Date(turno.fecha).getDay()];
   const disp = dispMap[usuario.id]?.[diaNombre];
   if (!disp) return false;
+
   if (!dentroDisponibilidad(turno, disp)) return false;
   if (beneMap[usuario.id]?.has(turno.fecha)) return false;
 
   const regla = REGLAS[usuario.horas_contrato];
   if (!regla) return false;
+
   if (regla.soloDias && !regla.soloDias.includes(diaNombre)) return false;
+
   if (diaNombre === 'domingo') {
-    const domingosAsignados = shifts.filter(t=> new Date(t.fecha).getDay()===0).length;
+    const domingosAsignados = shifts.filter(t => new Date(t.fecha).getDay() === 0).length;
     if (domingosAsignados >= regla.domingosPorMes) return false;
   }
 
-  // Horas semanales
-  const usadas = shifts.reduce((sum,t)=> sum + calcularHoras(t), 0);
+  const usadas = shifts.reduce((sum, t) => sum + calcularHoras(t), 0);
   if (usadas + calcularHoras(turno) > usuario.horas_contrato) return false;
 
-  // Permiso de cierre (si empieza ≥16:30)
   if (parseTime(turno.hora_inicio) >= parseTime('16:30') && !usuario.puede_cerrar) {
     return false;
   }
 
-  // No puede solaparse con otro turno suyo
   if (tieneSolapamiento(turno, shifts)) return false;
 
   return true;
 }
 
-/**  
- * Dado un turno “origen” (que X no puede cubrir), sugiere posibles intercambios  
- * contra cualquier otro turno de la misma semana.  
- * Devuelve un array de { usuario_id, turnoDestino }  
+/**
+ * Dado un turno “origen”, sugiere posibles intercambios contra cualquier otro turno
+ * de la misma semana.
  */
 async function sugerirIntercambio(turnoOrigen) {
-  // 1) calcular rango lunes–domingo de la semana de turnoOrigen.fecha
+  // 1) rango lunes–domingo
   const d0 = new Date(turnoOrigen.fecha);
   const dia  = d0.getDay();              // 0=dom
   const lunes = new Date(d0);
@@ -95,7 +92,7 @@ async function sugerirIntercambio(turnoOrigen) {
   const startWeek = lunes.toISOString().slice(0,10);
   const endWeek   = domingo.toISOString().slice(0,10);
 
-  // 2) Cargo usuarios, disponibilidades, beneficios y turnos de esa semana
+  // 2) cargo datos
   const { rows: usuarios } = await db.query(
     'SELECT id, horas_contrato, puede_cerrar FROM usuarios'
   );
@@ -106,7 +103,7 @@ async function sugerirIntercambio(turnoOrigen) {
     [startWeek, endWeek]
   );
 
-  // 3) Índices de ayuda
+  // 3) índices de ayuda
   const dispMap = {};
   disponibilidades.forEach(d => {
     dispMap[d.usuario_id] ||= {};
@@ -125,34 +122,44 @@ async function sugerirIntercambio(turnoOrigen) {
 
   const sugeridos = [];
   const idX = turnoOrigen.usuario_id;
-  const userX = usuarios.find(u=>u.id===idX);
+  const userX = usuarios.find(u => u.id === idX);
+  if (!userX) {
+    console.warn(`Usuario origen ${idX} no encontrado en usuarios.`);
+    return [];
+  }
+  // quito de shiftsX el turnoOrigen mismo
   const shiftsX = (turnsByUser[idX] || [])
-    .filter(t => !(t.fecha===turnoOrigen.fecha && t.hora_inicio===turnoOrigen.hora_inicio));
+    .filter(t => !(t.fecha === turnoOrigen.fecha && t.hora_inicio === turnoOrigen.hora_inicio));
 
-  // 4) Para cada turno T de la semana de otro usuario Y:
+  // 4) para cada turno T de la semana
   for (const t of turnsWeek) {
     if (t.usuario_id === idX) continue;
 
+    const userY = usuarios.find(u => u.id === t.usuario_id);
+    if (!userY) {
+      console.warn(`Usuario destino ${t.usuario_id} no encontrado en usuarios.`);
+      continue;
+    }
+
+    // turnos de Y sin el turno t
+    const shiftsY = (turnsByUser[userY.id] || [])
+      .filter(uT => !(uT.fecha === t.fecha && uT.hora_inicio === t.hora_inicio));
+
     // a) ¿puede Y cubrir el turnoOrigen?
-    const shiftsY = (turnsByUser[t.usuario_id] || [])
-      .filter(uTurno => !(uTurno.fecha===t.fecha && uTurno.hora_inicio===t.hora_inicio));
-    if (!puedeAsignarShift(
-      usuarios.find(u=>u.id===t.usuario_id),
-      turnoOrigen,
-      dispMap, beneMap, shiftsY
-    )) continue;
+    if (!puedeAsignarShift(userY, turnoOrigen, dispMap, beneMap, shiftsY)) {
+      continue;
+    }
 
-    // b) ¿puede X cubrir el turno T?
-    if (!puedeAsignarShift(
-      userX,
-      { fecha: t.fecha, hora_inicio: t.hora_inicio, hora_fin: t.hora_fin },
-      dispMap, beneMap, shiftsX
-    )) continue;
+    // b) ¿puede X cubrir el turno de Y?
+    const turnoDestino = { fecha: t.fecha, hora_inicio: t.hora_inicio, hora_fin: t.hora_fin };
+    if (!puedeAsignarShift(userX, turnoDestino, dispMap, beneMap, shiftsX)) {
+      continue;
+    }
 
-    // c) si ambas validaciones pasan, lo sugerimos
+    // c) ambos pasan => sugerido
     sugeridos.push({
-      usuario_id:   t.usuario_id,
-      turnoDestino: { fecha: t.fecha, hora_inicio: t.hora_inicio, hora_fin: t.hora_fin }
+      usuario_id:   userY.id,
+      turnoDestino
     });
   }
 

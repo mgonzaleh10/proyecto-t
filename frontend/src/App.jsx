@@ -1,8 +1,10 @@
-import React from 'react'
-import { Routes, Route, Link } from 'react-router-dom'
-import Home from './pages/Home'
-import TurnosPage from './pages/TurnosPage'
-import Intercambio from './pages/Intercambio'
+import React from 'react';
+import { Routes, Route, Link } from 'react-router-dom';
+
+import Home from './pages/Home';
+import TurnosPage from './pages/TurnosPage';
+import Intercambio from './pages/Intercambio';
+import PlanillaTurnos from './pages/PlanillaTurnos'; // si ya lo tienes
 
 export default function App() {
   return (
@@ -10,7 +12,8 @@ export default function App() {
       <header style={{ padding: '1rem', background: '#f0f0f0' }}>
         <Link to="/" style={{ marginRight: '1rem' }}>🏠 Home</Link>
         <Link to="/turnos" style={{ marginRight: '1rem' }}>Turnos</Link>
-        <Link to="/intercambio">Intercambio</Link>
+        <Link to="/intercambio" style={{ marginRight: '1rem' }}>Intercambio</Link>
+        <Link to="/planilla">Planilla</Link>
       </header>
 
       <main>
@@ -18,8 +21,8 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/turnos" element={<TurnosPage />} />
           <Route path="/intercambio" element={<Intercambio />} />
+          <Route path="/planilla" element={<PlanillaTurnos />} />
 
-          {/* Ruta 404 */}
           <Route
             path="*"
             element={
@@ -32,5 +35,5 @@ export default function App() {
         </Routes>
       </main>
     </>
-  )
+  );
 }
