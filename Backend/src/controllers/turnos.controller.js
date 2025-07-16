@@ -3,8 +3,9 @@ const {
   obtenerTurnos,
   obtenerTurnosPorUsuario,
   obtenerTurnosPorFecha,
-  eliminarTurno: eliminarTurnoModel,
-  eliminarTodosTurnos
+  eliminarTurnoPorId,
+  eliminarTodosTurnos,
+  actualizarTurnoPorId
 } = require('../models/turno.model');
 const { generarTurnosAutomaticamente } = require('../services/generadorHorarios');
 const { sugerirIntercambio } = require('../services/recomendacionesHorarios');
@@ -90,7 +91,7 @@ const recomendarIntercambio = async (req, res) => {
 const eliminarTurno = async (req, res) => {
   try {
     const { id } = req.params;
-    await eliminarTurnoModel(id);
+    await eliminarTurnoPorId(id);
     res.json({ mensaje: 'Turno eliminado correctamente' });
   } catch (error) {
     console.error('❌ Error al eliminar turno:', error);
@@ -108,6 +109,21 @@ const eliminarTodos = async (req, res) => {
   }
 };
 
+const actualizarTurno = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const cambios = req.body; // { fecha, hora_inicio, hora_fin, observaciones }
+    const actualizado = await actualizarTurnoPorId(id, cambios);
+    if (!actualizado) {
+      return res.status(404).json({ error: 'Turno no encontrado' });
+    }
+    res.json(actualizado);
+  } catch (error) {
+    console.error('❌ Error al actualizar turno:', error);
+    res.status(500).json({ error: 'Error del servidor al actualizar turno' });
+  }
+};
+
 module.exports = {
   registrarTurno,
   listarTurnos,
@@ -116,5 +132,6 @@ module.exports = {
   generarHorario,
   recomendarIntercambio,
   eliminarTurno,
-  eliminarTodos
+  eliminarTodos,
+  actualizarTurno
 };
