@@ -5,15 +5,28 @@ import { getUsuarios } from '../api/usuarios'
 const DAY_LABELS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
 /**
- * Dado un YYYY‑MM‑DD cualquiera, devuelve un array de 7 Date
- * comenzando por el lunes de esa misma semana.
+ * Parsea una fecha "YYYY‑MM‑DD" como fecha local (sin quirk UTC).
+ */
+function parseLocalDate(ymd) {
+  const [year, month, day] = ymd.split('-').map(Number)
+  // month - 1 porque en JS enero = 0
+  return new Date(year, month - 1, day)
+}
+
+/**
+ * Dado un YYYY‑MM‑DD (string) o Date, devuelve un array de 7 Date
+ * comenzando por el lunes de esa misma semana (si base es lunes, arranca en ese mismo día).
  */
 function getWeekDates(base) {
-  const date = new Date(base)
-  const day = date.getDay()           // 0=Domingo…6=Sábado
-  // cálculo: para llegar al lunes restamos (day+6)%7
+  const date = typeof base === 'string'
+    ? parseLocalDate(base)
+    : new Date(base)
+  const day = date.getDay() // 0=Domingo…6=Sábado
+  // Si es domingo, day=0→ queremos retroceder 6 días; si es lunes (1) retroceder 0...
+  const diffToMonday = (day + 6) % 7
   const monday = new Date(date)
-  monday.setDate(date.getDate() - ((day + 6) % 7))
+  monday.setDate(date.getDate() - diffToMonday)
+
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday)
     d.setDate(monday.getDate() + i)
@@ -22,22 +35,21 @@ function getWeekDates(base) {
 }
 
 export default function PlanillaTurnos() {
+  // baseDate es string "YYYY‑MM‑DD"
   const [baseDate, setBaseDate] = useState(
     new Date().toISOString().slice(0, 10)
   )
-  const [weekDates, setWeekDates] = useState(() =>
-    getWeekDates(baseDate)
-  )
-  const [inputs, setInputs] = useState({}) // { 0: { usuario_id, inicio, fin }, … }
+  const [weekDates, setWeekDates] = useState(getWeekDates(baseDate))
+  const [inputs, setInputs] = useState({}) // { indexDeDía: { usuario_id, inicio, fin } }
   const [crews, setCrews] = useState([])
 
-  // cuando cambie la fecha de referencia, recalculamos la semana
+  // Al cambiar baseDate, recalculamos la semana completa
   useEffect(() => {
     setWeekDates(getWeekDates(baseDate))
-    setInputs({}) // limpiar inputs al cambiar semana
+    setInputs({})
   }, [baseDate])
 
-  // cargamos el listado de usuarios (crews)
+  // Traemos la lista de usuarios (crews)
   useEffect(() => {
     getUsuarios()
       .then(res => setCrews(res.data))
@@ -115,9 +127,7 @@ export default function PlanillaTurnos() {
               <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>
                 <select
                   value={inputs[i]?.usuario_id || ''}
-                  onChange={e =>
-                    handleChange(i, 'usuario_id', e.target.value)
-                  }
+                  onChange={e => handleChange(i, 'usuario_id', e.target.value)}
                 >
                   <option value="">Seleccionar...</option>
                   {crews.map(u => (
