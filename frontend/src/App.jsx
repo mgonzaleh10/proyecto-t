@@ -1,10 +1,10 @@
-import React from 'react';
-import { Routes, Route, Link } from 'react-router-dom';
-
-import Home from './pages/Home';
-import TurnosPage from './pages/TurnosPage';
-import Intercambio from './pages/Intercambio';
-import PlanillaTurnos from './pages/PlanillaTurnos'; // si ya lo tienes
+import React from 'react'
+import { Routes, Route, Link } from 'react-router-dom'
+import Home from './pages/Home'
+import TurnosPage from './pages/TurnosPage'
+import Intercambio from './pages/Intercambio'
+import UsuariosPage from './pages/UsuariosPage'
+import PlanillaTurnos from './pages/PlanillaTurnos'
 
 export default function App() {
   return (
@@ -13,20 +13,22 @@ export default function App() {
         <Link to="/" style={{ marginRight: '1rem' }}>🏠 Home</Link>
         <Link to="/turnos" style={{ marginRight: '1rem' }}>Turnos</Link>
         <Link to="/intercambio" style={{ marginRight: '1rem' }}>Intercambio</Link>
+        <Link to="/usuarios" style={{ marginRight: '1rem' }}>Crews</Link>
         <Link to="/planilla">Planilla</Link>
       </header>
 
-      <main>
+      <main style={{ padding: '2rem' }}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/turnos" element={<TurnosPage />} />
           <Route path="/intercambio" element={<Intercambio />} />
+          <Route path="/usuarios" element={<UsuariosPage />} />
           <Route path="/planilla" element={<PlanillaTurnos />} />
 
           <Route
             path="*"
             element={
-              <div style={{ padding: '2rem' }}>
+              <div>
                 <h2>404 – Página no encontrada</h2>
                 <Link to="/">Volver al inicio</Link>
               </div>
@@ -35,5 +37,5 @@ export default function App() {
         </Routes>
       </main>
     </>
-  );
+  )
 }
