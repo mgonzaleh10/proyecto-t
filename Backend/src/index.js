@@ -15,16 +15,12 @@ app.use('/disponibilidades', disponibilidadRoutes);
 app.use('/beneficios', beneficiosRoutes);
 app.use('/turnos', turnosRoutes);
 
-
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, async () => {
   console.log(`Servidor corriendo en el puerto ${PORT}`);
   try {
     const result = await db.query('SELECT NOW()');
-    const dbName = process.env.DB_NAME || 'proyecto';
-    console.log(`✅ Conexión exitosa a PostgreSQL. Fecha actual del servidor: ${result.rows[0].now}`);
-    console.log(`📦 Base de datos conectada: ${dbName}`);
+    console.log(`✅ Conexión a PostgreSQL OK. Fecha: ${result.rows[0].now}`);
   } catch (error) {
     console.error('❌ Error al conectar con PostgreSQL:', error);
   }

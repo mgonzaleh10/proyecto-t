@@ -1,8 +1,18 @@
 const express = require('express');
 const router = express.Router();
-const { crearUsuario, listarUsuarios } = require('../controllers/usuarios.controller');
+const {
+  crearUsuario,
+  listarUsuarios,
+  eliminarUsuario
+} = require('../controllers/usuarios.controller');
 
+// Crear nuevo crew
 router.post('/', crearUsuario);
-router.get('/', listarUsuarios); // 👈 Aquí añadimos el GET
+
+// Listar todos los crews
+router.get('/', listarUsuarios);
+
+// Eliminar crew por ID
+router.delete('/:id', eliminarUsuario);
 
 module.exports = router;
