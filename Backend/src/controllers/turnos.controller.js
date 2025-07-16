@@ -1,136 +1,74 @@
-const db = require('../config/db');
 const {
   crearTurno,
   obtenerTurnos,
   obtenerTurnosPorUsuario,
-  obtenerTurnosPorFecha
+  obtenerTurnosPorFecha,
+  eliminarTurno: eliminarTurnoModel,
+  eliminarTodosTurnos
 } = require('../models/turno.model');
 const { generarTurnosAutomaticamente } = require('../services/generadorHorarios');
 const { sugerirIntercambio } = require('../services/recomendacionesHorarios');
 
-/** Convierte "HH:MM" o "HH:MM:SS" a minutos desde 00:00 */
-function parseTime(t) {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + m;
-}
-
-/** Calcula duración neta en horas, restando 1h de colación */
-function calcularHorasNetas(hora_inicio, hora_fin) {
-  const minutos = parseTime(hora_fin) - parseTime(hora_inicio);
-  return Math.max(0, minutos / 60 - 1);
-}
-
 const registrarTurno = async (req, res) => {
   try {
-    // Aceptamos array o un solo objeto
-    const bodyTurnos = Array.isArray(req.body) ? req.body : [req.body];
-
-    // Ordenamos por fecha para que la acumulación sea cronológica
-    bodyTurnos.sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-
-    // Llevamos en memoria las horas acumuladas por usuario en este lote
-    const horasAcum = {};
-
+    const turnos = Array.isArray(req.body) ? req.body : [req.body];
     const resultados = [];
-
-    for (const turno of bodyTurnos) {
-      const {
-        usuario_id,
-        fecha,
-        hora_inicio,
-        hora_fin,
-        creado_por,
-        observaciones = ''
-      } = turno;
-
-      if (!usuario_id || !fecha || !hora_inicio || !hora_fin || !creado_por) {
-        console.warn('⚠️ Turno incompleto omitido:', turno);
-        continue;
-      }
-
-      // 1) Inserto el turno
-      const nuevo = await crearTurno({
-        usuario_id,
-        fecha,
-        hora_inicio,
-        hora_fin,
-        creado_por,
-        observaciones
-      });
-
-      // 2) Leo el contrato del usuario
-      const { rows: [usr] } = await db.query(
-        'SELECT horas_contrato FROM usuarios WHERE id = $1',
-        [usuario_id]
-      );
-      const horasContrato = usr?.horas_contrato ?? 0;
-
-      // 3) Calculamos la duración neta de este turno
-      const netas = calcularHorasNetas(hora_inicio, hora_fin);
-
-      // 4) Acumulamos en memoria
-      horasAcum[usuario_id] = (horasAcum[usuario_id] || 0) + netas;
-
-      // 5) Guardamos el resultado
-      resultados.push({
-        turno: nuevo,
-        horasTrabajadas: horasAcum[usuario_id],
-        horasContrato
-      });
+    for (const t of turnos) {
+      const { usuario_id, fecha, hora_inicio, hora_fin, creado_por } = t;
+      if (!usuario_id || !fecha || !hora_inicio || !hora_fin || !creado_por) continue;
+      const nuevo = await crearTurno(t);
+      resultados.push(nuevo);
     }
-
     if (resultados.length === 0) {
       return res.status(400).json({ error: 'No se pudo registrar ningún turno válido.' });
     }
-
-    return res.status(201).json(resultados);
-
+    res.status(201).json(resultados);
   } catch (error) {
     console.error('❌ Error al registrar turnos:', error);
-    return res.status(500).json({ error: 'Error del servidor' });
+    res.status(500).json({ error: 'Error del servidor' });
   }
 };
 
 const listarTurnos = async (req, res) => {
   try {
-    const turnos = await obtenerTurnos();
-    return res.json(turnos);
+    const t = await obtenerTurnos();
+    res.json(t);
   } catch (error) {
     console.error('❌ Error al obtener turnos:', error);
-    return res.status(500).json({ error: 'Error del servidor' });
+    res.status(500).json({ error: 'Error del servidor' });
   }
 };
 
 const turnosPorUsuario = async (req, res) => {
   try {
     const { id } = req.params;
-    const turnos = await obtenerTurnosPorUsuario(id);
-    return res.json(turnos);
+    const t = await obtenerTurnosPorUsuario(id);
+    res.json(t);
   } catch (error) {
     console.error('❌ Error al obtener turnos por usuario:', error);
-    return res.status(500).json({ error: 'Error del servidor' });
+    res.status(500).json({ error: 'Error del servidor' });
   }
 };
 
 const turnosPorFecha = async (req, res) => {
   try {
     const { fecha } = req.params;
-    const turnos = await obtenerTurnosPorFecha(fecha);
-    return res.json(turnos);
+    const t = await obtenerTurnosPorFecha(fecha);
+    res.json(t);
   } catch (error) {
     console.error('❌ Error al obtener turnos por fecha:', error);
-    return res.status(500).json({ error: 'Error del servidor' });
+    res.status(500).json({ error: 'Error del servidor' });
   }
 };
 
 const generarHorario = async (req, res) => {
-  const { fechaInicio } = req.body;
   try {
+    const { fechaInicio } = req.body;
     const resultado = await generarTurnosAutomaticamente(fechaInicio);
-    return res.status(200).json({ mensaje: 'Horario generado con éxito', detalle: resultado });
+    res.json({ mensaje: 'Horario generado con éxito', detalle: resultado });
   } catch (error) {
-    console.error('❌ Error al generar horario automáticamente:', error);
-    return res.status(500).json({ error: 'No se pudo generar el horario automáticamente' });
+    console.error('❌ Error al generar horario:', error);
+    res.status(500).json({ error: 'No se pudo generar el horario automáticamente' });
   }
 };
 
@@ -142,10 +80,31 @@ const recomendarIntercambio = async (req, res) => {
   try {
     const turnoOrigen = { usuario_id, fecha, hora_inicio, hora_fin };
     const recomendaciones = await sugerirIntercambio(turnoOrigen);
-    return res.json({ recomendados: recomendaciones });
+    res.json({ recomendados: recomendaciones });
   } catch (error) {
     console.error('❌ Error al sugerir intercambio:', error);
-    return res.status(500).json({ error: 'Error del servidor al sugerir intercambio' });
+    res.status(500).json({ error: 'Error del servidor al sugerir intercambio' });
+  }
+};
+
+const eliminarTurno = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await eliminarTurnoModel(id);
+    res.json({ mensaje: 'Turno eliminado correctamente' });
+  } catch (error) {
+    console.error('❌ Error al eliminar turno:', error);
+    res.status(500).json({ error: 'Error del servidor al eliminar turno' });
+  }
+};
+
+const eliminarTodos = async (req, res) => {
+  try {
+    await eliminarTodosTurnos();
+    res.json({ mensaje: 'Todos los turnos eliminados correctamente' });
+  } catch (error) {
+    console.error('❌ Error al eliminar todos los turnos:', error);
+    res.status(500).json({ error: 'Error del servidor al eliminar todos los turnos' });
   }
 };
 
@@ -155,5 +114,7 @@ module.exports = {
   turnosPorUsuario,
   turnosPorFecha,
   generarHorario,
-  recomendarIntercambio
+  recomendarIntercambio,
+  eliminarTurno,
+  eliminarTodos
 };

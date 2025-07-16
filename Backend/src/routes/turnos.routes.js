@@ -6,20 +6,25 @@ const {
   turnosPorUsuario,
   generarHorario,
   turnosPorFecha,
-  recomendarIntercambio
+  recomendarIntercambio,
+  eliminarTurno,
+  eliminarTodos
 } = require('../controllers/turnos.controller');
 
-// CRUD básico de turnos
+// CRUD
 router.post('/', registrarTurno);
-router.post('/manual', registrarTurno);
 router.get('/', listarTurnos);
 router.get('/:id', turnosPorUsuario);
 router.get('/fecha/:fecha', turnosPorFecha);
 
-// Generación automática de la semana
+// Generación automática
 router.post('/generar', generarHorario);
 
-// Intercambio de turnos
+// Intercambio
 router.post('/intercambio', recomendarIntercambio);
+
+// Borrado
+router.delete('/:id', eliminarTurno);    // elimina turno por id
+router.delete('/', eliminarTodos);        // elimina todos los turnos
 
 module.exports = router;
