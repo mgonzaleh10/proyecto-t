@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react'
 import {
   crearTurno,
   updateTurno,
-  getTurnosPorFecha
+  getTurnosPorFecha,
+  eliminarTodosTurnos
 } from '../api/turnos'
 import { getUsuarios } from '../api/usuarios'
 
@@ -33,15 +34,15 @@ function getWeekDates(base) {
   })
 }
 
-export default function ManualCalendar() {
-  const [baseDate,    setBaseDate]   = useState(
+export default function PlanillaTurnosManual() {
+  const [baseDate,  setBaseDate]  = useState(
     new Date().toISOString().slice(0,10)
   )
-  const [weekDates,   setWeekDates]  = useState(getWeekDates(baseDate))
-  const [crews,       setCrews]      = useState([])
-  const [existing,    setExisting]   = useState([]) 
-  const [cells,       setCells]      = useState({})  
-  const [editing,     setEditing]    = useState(false)
+  const [weekDates, setWeekDates] = useState(getWeekDates(baseDate))
+  const [crews,     setCrews]     = useState([])
+  const [existing,  setExisting]  = useState([])
+  const [cells,     setCells]     = useState({})
+  const [editing,   setEditing]   = useState(false)
 
   // 1) cuando cambie baseDate, recalcular semana y limpiar
   useEffect(() => {
@@ -80,7 +81,7 @@ export default function ManualCalendar() {
         if (idx>=0) {
           m[t.usuario_id] ||= {}
           m[t.usuario_id][idx] = {
-            id: t.id,
+            id:     t.id,
             inicio: t.hora_inicio.slice(0,5),
             fin:    t.hora_fin.slice(0,5)
           }
@@ -131,8 +132,21 @@ export default function ManualCalendar() {
     }
     // recargar
     setEditing(false)
-    const reset = () => setExisting([]) // dispara el useEffect de carga
-    reset()
+    setExisting([])
+  }
+
+  const handleDeleteAll = async () => {
+    if (!window.confirm('¿Seguro que quieres eliminar TODOS los turnos de esta semana?')) return
+    try {
+      await eliminarTodosTurnos()
+      setEditing(false)
+      setExisting([])
+      setCells({})
+      alert('Todos los turnos han sido eliminados.')
+    } catch (err) {
+      console.error(err)
+      alert('Error al eliminar todos los turnos.')
+    }
   }
 
   return (
@@ -149,14 +163,20 @@ export default function ManualCalendar() {
             style={{ marginLeft:8 }}
           />
         </label>
-        &nbsp;&nbsp;
-        <button onClick={()=>setEditing(!editing)}>
+
+        <button onClick={()=>setEditing(!editing)} style={{ marginLeft:16 }}>
           {editing ? 'Cancelar' : 'Editar'}
         </button>
+
         {editing && (
-          <button onClick={saveAll} style={{ marginLeft:8 }}>
-            Guardar Cambios
-          </button>
+          <>
+            <button onClick={saveAll} style={{ marginLeft:8 }}>
+              Guardar Cambios
+            </button>
+            <button onClick={handleDeleteAll} style={{ marginLeft:8, color:'red' }}>
+              Eliminar Todos
+            </button>
+          </>
         )}
       </div>
 
@@ -180,31 +200,31 @@ export default function ManualCalendar() {
                 const cell = cells[c.id]?.[i]
                 return (
                   <td key={i} style={td}>
-                    {editing ? (
-                      <>
-                        <input
-                          type="time"
-                          value={cell?.inicio||''}
-                          onChange={e=>
-                            handleCellChange(c.id,i,'inicio',e.target.value)
-                          }
-                          style={{ width: '45%' }}
-                        />
-                        –
-                        <input
-                          type="time"
-                          value={cell?.fin||''}
-                          onChange={e=>
-                            handleCellChange(c.id,i,'fin',e.target.value)
-                          }
-                          style={{ width: '45%' }}
-                        />
-                      </>
-                    ) : (
-                      cell
-                      ? `${cell.inicio}–${cell.fin}`
-                      : 'Libre'
-                    )}
+                    {editing
+                      ? <>
+                          <input
+                            type="time"
+                            value={cell?.inicio||''}
+                            onChange={e=>
+                              handleCellChange(c.id,i,'inicio',e.target.value)
+                            }
+                            style={{ width:'45%' }}
+                          />
+                          –
+                          <input
+                            type="time"
+                            value={cell?.fin||''}
+                            onChange={e=>
+                              handleCellChange(c.id,i,'fin',e.target.value)
+                            }
+                            style={{ width:'45%' }}
+                          />
+                        </>
+                      : (cell
+                          ? `${cell.inicio}–${cell.fin}`
+                          : 'Libre'
+                        )
+                    }
                   </td>
                 )
               })}
