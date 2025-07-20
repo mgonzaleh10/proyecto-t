@@ -175,20 +175,41 @@ export default function PlanillaTurnosManual() {
       for (let i = 0; i < 7; i++) {
         const c = row[i]
         if (!c) continue
-        const payload = {
-          fecha:       weekDates[i].toISOString().slice(0,10),
-          hora_inicio: c.inicio,
-          hora_fin:    c.fin,
-          creado_por:  19,
-          observaciones:''
-        }
+
+        // Eliminar si libre y ya existía
         if (c.free) {
           if (c.id) await eliminarTurno(c.id)
           continue
         }
+
+        // Eliminar si quitaron horas y existía
+        if (c.id && (!c.inicio || !c.fin)) {
+          await eliminarTurno(c.id)
+          continue
+        }
+
+        // Crear o actualizar
         if (c.inicio && c.fin) {
-          if (c.id) await updateTurno(c.id, payload)
-          else    await crearTurno({ ...payload, usuario_id: crew.id })
+          const payload = {
+            fecha:       weekDates[i].toISOString().slice(0,10),
+            hora_inicio: c.inicio,
+            hora_fin:    c.fin,
+            creado_por:  19,
+            observaciones:''
+          }
+          if (c.id) {
+            await updateTurno(c.id, payload)
+          } else {
+            const created = await crearTurno({ ...payload, usuario_id: crew.id })
+            // Asignamos ID al estado para evitar recrear
+            setCells(prev => ({
+              ...prev,
+              [crew.id]: {
+                ...prev[crew.id],
+                [i]: { ...prev[crew.id][i], id: created.id }
+              }
+            }))
+          }
         }
       }
     }
@@ -245,7 +266,6 @@ export default function PlanillaTurnosManual() {
                     {editing ? (
                       avail ? (
                         cell?.free ? (
-                          //  → CELDA LIBRE: botón centrado y sin inputs
                           <div className="free-cell-edit">
                             <button
                               className="btn-free edit-center"
@@ -255,7 +275,6 @@ export default function PlanillaTurnosManual() {
                             </button>
                           </div>
                         ) : (
-                          //  → CELDA NORMAL: inputs + “⛔”
                           <>
                             <input
                               type="time"

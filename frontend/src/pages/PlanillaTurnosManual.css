@@ -139,8 +139,3 @@
   border-radius: 4px;
   cursor: pointer;
 }
-
-/* Asegura que los inputs desaparezcan cuando esté en free */
-.planilla-table td input[type="time"] {
-  /* ya existe, no interferimos; la rama de free no renderiza inputs */
-}
