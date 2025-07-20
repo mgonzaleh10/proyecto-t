@@ -3,9 +3,9 @@ const {
   obtenerTurnos,
   obtenerTurnosPorUsuario,
   obtenerTurnosPorFecha,
-  eliminarTurnoPorId,
-  eliminarTodosTurnos,
-  actualizarTurnoPorId
+  updateTurno: updateTurnoModel,
+  eliminarTurno: eliminarTurnoModel,
+  eliminarTodosTurnos
 } = require('../models/turno.model');
 const { generarTurnosAutomaticamente } = require('../services/generadorHorarios');
 const { sugerirIntercambio } = require('../services/recomendacionesHorarios');
@@ -88,10 +88,21 @@ const recomendarIntercambio = async (req, res) => {
   }
 };
 
+const actualizarTurno = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const actualizado = await updateTurnoModel(id, req.body);
+    res.json(actualizado);
+  } catch (error) {
+    console.error('❌ Error al actualizar turno:', error);
+    res.status(500).json({ error: 'Error del servidor al actualizar turno' });
+  }
+};
+
 const eliminarTurno = async (req, res) => {
   try {
     const { id } = req.params;
-    await eliminarTurnoPorId(id);
+    await eliminarTurnoModel(id);
     res.json({ mensaje: 'Turno eliminado correctamente' });
   } catch (error) {
     console.error('❌ Error al eliminar turno:', error);
@@ -109,21 +120,6 @@ const eliminarTodos = async (req, res) => {
   }
 };
 
-const actualizarTurno = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const cambios = req.body; // { fecha, hora_inicio, hora_fin, observaciones }
-    const actualizado = await actualizarTurnoPorId(id, cambios);
-    if (!actualizado) {
-      return res.status(404).json({ error: 'Turno no encontrado' });
-    }
-    res.json(actualizado);
-  } catch (error) {
-    console.error('❌ Error al actualizar turno:', error);
-    res.status(500).json({ error: 'Error del servidor al actualizar turno' });
-  }
-};
-
 module.exports = {
   registrarTurno,
   listarTurnos,
@@ -131,7 +127,7 @@ module.exports = {
   turnosPorFecha,
   generarHorario,
   recomendarIntercambio,
+  actualizarTurno,
   eliminarTurno,
-  eliminarTodos,
-  actualizarTurno
+  eliminarTodos
 };

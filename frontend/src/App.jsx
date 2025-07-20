@@ -1,11 +1,13 @@
 import React from 'react'
 import { Routes, Route, Link } from 'react-router-dom'
+
 import Home from './pages/Home'
 import TurnosPage from './pages/TurnosPage'
 import Intercambio from './pages/Intercambio'
 import UsuariosPage from './pages/UsuariosPage'
 import PlanillaTurnos from './pages/PlanillaTurnos'
 import PlanillaTurnosManual from './pages/PlanillaTurnosManual'
+import DisponibilidadesPage from './pages/DisponibilidadesPage'
 
 export default function App() {
   return (
@@ -16,7 +18,8 @@ export default function App() {
         <Link to="/intercambio" style={{ marginRight: '1rem' }}>Intercambio</Link>
         <Link to="/usuarios" style={{ marginRight: '1rem' }}>Crews</Link>
         <Link to="/planilla" style={{ marginRight: '1rem' }}>Planilla</Link>
-        <Link to="/planilla/manual">Planilla Manual</Link>
+        <Link to="/planilla-manual" style={{ marginRight: '1rem' }}>Planilla Manual</Link>
+        <Link to="/disponibilidades">Disponibilidades</Link>
       </header>
 
       <main style={{ padding: '2rem' }}>
@@ -25,12 +28,9 @@ export default function App() {
           <Route path="/turnos" element={<TurnosPage />} />
           <Route path="/intercambio" element={<Intercambio />} />
           <Route path="/usuarios" element={<UsuariosPage />} />
-
-          {/* Vista de "Planilla" sencilla */}
           <Route path="/planilla" element={<PlanillaTurnos />} />
-
-          {/* Nuevo calendario manual editable */}
-          <Route path="/planilla/manual" element={<PlanillaTurnosManual />} />
+          <Route path="/planilla-manual" element={<PlanillaTurnosManual />} />
+          <Route path="/disponibilidades" element={<DisponibilidadesPage />} />
 
           {/* Ruta 404 */}
           <Route

@@ -1,8 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const { registrarDisponibilidad, listarDisponibilidades, } = require('../controllers/disponibilidades.controller');
+const {
+  crearDisponibilidad,
+  listarDisponibilidades,
+  eliminarDisponibilidad,
+  eliminarTodas
+} = require('../controllers/disponibilidades.controller');
 
-router.post('/', registrarDisponibilidad);
+router.post('/', crearDisponibilidad);
 router.get('/', listarDisponibilidades);
+
+// borrado
+router.delete('/:id', eliminarDisponibilidad);
+router.delete('/', eliminarTodas);
 
 module.exports = router;

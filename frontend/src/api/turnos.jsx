@@ -32,7 +32,7 @@ export function eliminarTodosTurnos() {
   return client.delete('/turnos');
 }
 
-// ← Aquí añadimos la función que faltaba:
+// Aquí la agregas junto a las demás:
 export function updateTurno(id, body) {
   return client.put(`/turnos/${id}`, body);
 }
