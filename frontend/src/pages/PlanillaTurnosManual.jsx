@@ -11,20 +11,35 @@ const DAY_LABELS = [
   'Lunes', 'Martes', 'Miércoles', 'Jueves',
   'Viernes', 'Sábado', 'Domingo'
 ];
-// para mapear índice de JS (0=domingo…6=sábado) a nombres usados en disponibilidades:
-const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+const DAY_KEYS = [
+  'lunes','martes','miércoles','jueves',
+  'viernes','sábado','domingo'
+];
 
+// parsea "HH:MM" a minutos
+function parseTime(t) {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+// calcula horas netas (resta 1h de colación)
+function calcularHoras({ inicio, fin }) {
+  const mins = parseTime(fin) - parseTime(inicio);
+  return Math.max(0, mins / 60 - 1);
+}
+
+// parsea YYYY‑MM‑DD a Date local
 function parseLocalDate(ymd) {
   const [y, m, d] = ymd.split('-').map(Number);
   return new Date(y, m - 1, d);
 }
 
+// devuelve array de 7 fechas lunes→domingo
 function getWeekDates(base) {
   const date = typeof base === 'string'
     ? parseLocalDate(base)
     : new Date(base);
-  const day = date.getDay();            // 0=Dom…6=Sáb
-  const diffToMon = (day + 6) % 7;      // dom→6, lun→0…
+  const day = date.getDay();         // 0=Dom…6=Sáb
+  const diffToMon = (day + 6) % 7;   // Domingo→6, Lunes→0…
   const monday = new Date(date);
   monday.setDate(date.getDate() - diffToMon);
   return Array.from({ length: 7 }, (_, i) => {
@@ -34,54 +49,50 @@ function getWeekDates(base) {
   });
 }
 
-export default function PlanillaTurnosManual() {
-  const [baseDate, setBaseDate] = useState(
-    new Date().toISOString().slice(0,10)
-  );
+export default function ManualCalendar() {
+  const [baseDate, setBaseDate]   = useState(new Date().toISOString().slice(0,10));
   const [weekDates, setWeekDates] = useState(getWeekDates(baseDate));
-  const [crews, setCrews]       = useState([]);
-  const [existing, setExisting] = useState([]);
-  const [cells, setCells]       = useState({});   // { crewId: { dayIdx: { id, inicio, fin } } }
-  const [dispMap, setDispMap]   = useState({});   // { crewId: { dia_semana: { inicio, fin } } }
-  const [editing, setEditing]   = useState(false);
+  const [crews, setCrews]         = useState([]);
+  const [availRaw, setAvailRaw]   = useState([]);
+  const [availMap, setAvailMap]   = useState({});
+  const [existing, setExisting]   = useState([]);
+  const [cells, setCells]         = useState({});
+  const [editing, setEditing]     = useState(false);
 
-  // 1) cuando cambie baseDate, recalcular semana y resetear
+  // recalc semana y limpiar shifts
   useEffect(() => {
-    const w = getWeekDates(baseDate);
-    setWeekDates(w);
+    setWeekDates(getWeekDates(baseDate));
     setExisting([]);
     setCells({});
   }, [baseDate]);
 
-  // 2) cargar crews
+  // cargar crews
   useEffect(() => {
-    getUsuarios()
-      .then(r => setCrews(r.data))
-      .catch(console.error);
+    getUsuarios().then(r => setCrews(r.data)).catch(console.error);
   }, []);
 
-  // 3) cargar disponibilidades
+  // cargar disponibilidades
   useEffect(() => {
-    async function loadDisp() {
-      try {
-        const r = await getDisponibilidades();
-        const map = {};
-        r.data.forEach(d => {
-          map[d.usuario_id] ||= {};
-          map[d.usuario_id][d.dia_semana] = {
-            inicio: d.hora_inicio.slice(0,5),
-            fin:    d.hora_fin.slice(0,5)
-          };
-        });
-        setDispMap(map);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    loadDisp();
+    getDisponibilidades().then(r => setAvailRaw(r.data)).catch(console.error);
   }, []);
 
-  // 4) cargar turnos existentes de la semana
+  // montar mapa de disponibilidades
+  useEffect(() => {
+    const m = {};
+    availRaw.forEach(d => {
+      const crew = d.usuario_id;
+      const dayIdx = DAY_KEYS.indexOf(d.dia_semana);
+      if (dayIdx < 0) return;
+      m[crew] = m[crew] || {};
+      m[crew][dayIdx] = {
+        inicio: d.hora_inicio.slice(0,5),
+        fin:    d.hora_fin.slice(0,5)
+      };
+    });
+    setAvailMap(m);
+  }, [availRaw]);
+
+  // cargar turnos existentes y montar celdas
   useEffect(() => {
     async function load() {
       const all = [];
@@ -93,20 +104,18 @@ export default function PlanillaTurnosManual() {
         } catch {}
       }
       setExisting(all);
-      // inicializar celdas
       const m = {};
       all.forEach(t => {
         const idx = weekDates.findIndex(d=>
           d.toISOString().slice(0,10) === t.fecha.slice(0,10)
         );
-        if (idx >= 0) {
-          m[t.usuario_id] ||= {};
-          m[t.usuario_id][idx] = {
-            id: t.id,
-            inicio: t.hora_inicio.slice(0,5),
-            fin:    t.hora_fin.slice(0,5)
-          };
-        }
+        if (idx < 0) return;
+        m[t.usuario_id] = m[t.usuario_id] || {};
+        m[t.usuario_id][idx] = {
+          id:     t.id,
+          inicio: t.hora_inicio.slice(0,5),
+          fin:    t.hora_fin.slice(0,5)
+        };
       });
       setCells(m);
     }
@@ -130,10 +139,6 @@ export default function PlanillaTurnosManual() {
     for (let crew of crews) {
       const row = cells[crew.id] || {};
       for (let i = 0; i < 7; i++) {
-        // si no tenía disponibilidad, salto
-        const diaNombre = DIAS[ weekDates[i].getDay() ];
-        if (!dispMap[crew.id]?.[diaNombre]) continue;
-
         const c = row[i];
         if (!c || !c.inicio || !c.fin) continue;
         const payload = {
@@ -146,20 +151,12 @@ export default function PlanillaTurnosManual() {
         if (c.id) {
           await updateTurno(c.id, payload);
         } else {
-          await crearTurno({
-            ...payload,
-            usuario_id: crew.id
-          });
+          await crearTurno({ ...payload, usuario_id: crew.id });
         }
       }
     }
     setEditing(false);
-    // recargo
-    setExisting([]);
-    const timer = setTimeout(() => {
-      setExisting([]); 
-      clearTimeout(timer);
-    }, 0);
+    setExisting([]); // recarga
   };
 
   return (
@@ -193,54 +190,83 @@ export default function PlanillaTurnosManual() {
             <th style={th}>Crew / Día</th>
             {weekDates.map((d,i)=>(
               <th key={i} style={th}>
-                {DAY_LABELS[i]}<br/>
-                {d.toLocaleDateString()}
+                {DAY_LABELS[i]}<br/>{d.toLocaleDateString()}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {crews.map(c=>(
-            <tr key={c.id}>
-              <td style={tdLabel}>{c.nombre}</td>
-              {weekDates.map((_,i)=> {
-                const cell = cells[c.id]?.[i];
-                const diaNombre = DIAS[ weekDates[i].getDay() ];
-                const avail = dispMap[c.id]?.[diaNombre];
-                return (
-                  <td key={i} style={td}>
-                    {editing
-                      ? avail
-                        ? <>
-                            <input
-                              type="time"
-                              value={cell?.inicio||''}
-                              onChange={e=>
-                                handleCellChange(c.id,i,'inicio',e.target.value)
-                              }
-                              style={{ width: '45%' }}
-                            /> – 
-                            <input
-                              type="time"
-                              value={cell?.fin||''}
-                              onChange={e=>
-                                handleCellChange(c.id,i,'fin',e.target.value)
-                              }
-                              style={{ width: '45%' }}
-                            />
-                          </>
-                        : <em style={{ color:'#c00' }}>No disponible</em>
-                      : cell
-                        ? `${cell.inicio}–${cell.fin}`
-                        : avail
-                          ? 'Libre'
-                          : <em style={{ color:'#888' }}>No disponible</em>
+          {crews.map(crew => {
+            // calculo horas trabajadas esta semana
+            const shifts = cells[crew.id] || {};
+            const worked = Object.values(shifts)
+              .filter(s => s.inicio && s.fin)
+              .reduce((sum,s)=> sum + calcularHoras(s), 0);
+            return (
+              <tr key={crew.id}>
+                <td style={tdLabel}>
+                  {crew.nombre} ({worked.toFixed(1)}/{crew.horas_contrato})
+                </td>
+                {weekDates.map((_,i)=> {
+                  const shift = cells[crew.id]?.[i];
+                  const avail = availMap[crew.id]?.[i];
+                  if (!editing) {
+                    if (shift) {
+                      return (
+                        <td key={i} style={td}>
+                          {`${shift.inicio}–${shift.fin}`}
+                        </td>
+                      );
+                    } else if (avail) {
+                      return (
+                        <td key={i} style={td}>
+                        {avail.inicio}–{avail.fin}
+                        </td>
+                      );
+                    } else {
+                      return (
+                        <td key={i} style={{...td, color:'red'}}>
+                          No disponible
+                        </td>
+                      );
                     }
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
+                  }
+                  // edición
+                  if (!avail) {
+                    return (
+                      <td key={i} style={{...td, color:'red'}}>
+                        No disponible
+                      </td>
+                    );
+                  }
+                  return (
+                    <td key={i} style={td}>
+                      <input
+                        type="time"
+                        value={shift?.inicio||''}
+                        min={avail.inicio}
+                        max={avail.fin}
+                        onChange={e=>
+                          handleCellChange(crew.id,i,'inicio',e.target.value)
+                        }
+                        style={{ width:'45%' }}
+                      />–
+                      <input
+                        type="time"
+                        value={shift?.fin||''}
+                        min={avail.inicio}
+                        max={avail.fin}
+                        onChange={e=>
+                          handleCellChange(crew.id,i,'fin',e.target.value)
+                        }
+                        style={{ width:'45%' }}
+                      />
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
