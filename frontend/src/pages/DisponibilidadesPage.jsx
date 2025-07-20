@@ -12,27 +12,18 @@ const DAY_LABELS = ['lunes','martes','miércoles','jueves','viernes','sábado','
 export default function DisponibilidadesPage() {
   const [crews, setCrews] = useState([]);
   const [selectedCrew, setSelectedCrew] = useState('');
-  // inputs para el formulario
+  // inputs: { día: { inicio: 'HH:MM', fin: 'HH:MM' } }
   const [inputs, setInputs] = useState({});
   // guardamos lo que trae el servidor
   const [saved, setSaved] = useState([]);
 
-  // 1) cargar crews y todas las disponibilidades
+  // 1) cargar crews y todas las disponibilidades al montar
   useEffect(() => {
     getUsuarios().then(r => setCrews(r.data)).catch(console.error);
-    reloadDisponibilidades();
+    getDisponibilidades().then(r => setSaved(r.data)).catch(console.error);
   }, []);
 
-  const reloadDisponibilidades = async () => {
-    try {
-      const r = await getDisponibilidades();
-      setSaved(r.data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  // 2) cuando cambie de crew, precargamos sus disponibilidades
+  // 2) cuando cambie de crew, precargamos sus disponibilidades en inputs
   useEffect(() => {
     if (!selectedCrew) {
       setInputs({});
@@ -60,9 +51,28 @@ export default function DisponibilidadesPage() {
     }));
   };
 
-  // guarda las disponibilidades del crew seleccionado
+  // 3) Guardar: borra las que dejaste en blanco, crea las que definiste
   const handleSave = async () => {
-    if (!selectedCrew) return alert('Selecciona primero un crew.');
+    if (!selectedCrew) {
+      alert('Selecciona primero un crew.');
+      return;
+    }
+
+    // 3.a) borrar de la BD las disponibilidades que hayas dejado en blanco
+    const prevForCrew = saved.filter(d => d.usuario_id === Number(selectedCrew));
+    for (let d of prevForCrew) {
+      const entry = inputs[d.dia_semana];
+      // si no existe entrada o no tiene inicio o no fin, lo borramos
+      if (!entry || !entry.inicio || !entry.fin) {
+        try {
+          await eliminarDisponibilidad(d.id);
+        } catch (e) {
+          console.error('Error borrando disponibilidad:', e);
+        }
+      }
+    }
+
+    // 3.b) construir payload con solo los días que tienen inicio+fin
     const payload = Object.entries(inputs)
       .filter(([_, v]) => v.inicio && v.fin)
       .map(([dia_semana, v]) => ({
@@ -71,45 +81,39 @@ export default function DisponibilidadesPage() {
         hora_inicio: v.inicio,
         hora_fin:    v.fin
       }));
-    if (!payload.length) return alert('No hay disponibilidades para guardar.');
+
+    if (payload.length === 0) {
+      alert('No hay disponibilidades para guardar.');
+    } else {
+      try {
+        // puedes optar por mandar todas juntas
+        await crearDisponibilidad(payload);
+        alert('Disponibilidades guardadas.');
+      } catch (e) {
+        console.error(e);
+        alert('Error al guardar disponibilidades.');
+      }
+    }
+
+    // 3.c) recargar la lista completa
     try {
-      await crearDisponibilidad(payload);
-      alert('Disponibilidades guardadas.');
-      await reloadDisponibilidades();
+      const r = await getDisponibilidades();
+      setSaved(r.data);
     } catch (e) {
       console.error(e);
-      alert('Error al guardar.');
     }
   };
 
-  // elimina TODAS las disponibilidades
   const handleClearAll = async () => {
     if (!window.confirm('¿Eliminar TODAS las disponibilidades?')) return;
     try {
       await eliminarTodasDisponibilidades();
-      setInputs({});
       setSaved([]);
-      alert('Todas las disponibilidades eliminadas.');
+      setInputs({});
+      alert('Eliminadas todas.');
     } catch (e) {
       console.error(e);
       alert('Error al eliminar todo.');
-    }
-  };
-
-  // elimina sólo las disponibilidades del crew actual
-  const handleClearCrew = async () => {
-    if (!selectedCrew) return;
-    if (!window.confirm('¿Eliminar solo las disponibilidades de este crew?')) return;
-    try {
-      const toDelete = saved.filter(d => d.usuario_id === Number(selectedCrew));
-      // borra cada registro individualmente
-      await Promise.all(toDelete.map(d => eliminarDisponibilidad(d.id)));
-      alert(`Disponibilidades del crew ${selectedCrew} eliminadas.`);
-      await reloadDisponibilidades();
-      setInputs({});
-    } catch (e) {
-      console.error(e);
-      alert('Error al eliminar disponibilidades de este crew.');
     }
   };
 
@@ -152,7 +156,7 @@ export default function DisponibilidadesPage() {
               </tr>
             </thead>
             <tbody>
-              {DAY_LABELS.map((dia) => (
+              {DAY_LABELS.map(dia => (
                 <tr key={dia}>
                   <td style={td}>{dia}</td>
                   <td style={td}>
@@ -174,32 +178,22 @@ export default function DisponibilidadesPage() {
             </tbody>
           </table>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <div>
-              <button onClick={handleSave} style={btn}>
-                Guardar disponibilidad
-              </button>
-              <button
-                onClick={handleClearCrew}
-                style={{ ...btn, marginLeft: '1rem', background: '#c60' }}
-              >
-                Eliminar disponibilidad de este crew
-              </button>
-            </div>
-            <button
-              onClick={handleClearAll}
-              style={{ ...btn, background: '#c00' }}
-            >
-              Eliminar TODAS las disponibilidades
-            </button>
-          </div>
+          <button onClick={handleSave} style={btn}>
+            Guardar disponibilidades
+          </button>
+          <button
+            onClick={handleClearAll}
+            style={{ ...btn, marginLeft: '1rem', background: '#c00' }}
+          >
+            Eliminar todo
+          </button>
         </>
       )}
     </div>
   );
 }
 
-// estilos en línea
+// estilos en línea para no añadir CSS
 const th = { border: '1px solid #ccc', padding: '0.5rem', background: '#f7f7f7' };
 const td = { border: '1px solid #ccc', padding: '0.5rem' };
 const btn = {
