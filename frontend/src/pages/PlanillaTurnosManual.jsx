@@ -8,9 +8,10 @@ import {
 import { getUsuarios } from '../api/usuarios'
 import { getDisponibilidades } from '../api/disponibilidades'
 
+import './PlanillaTurnosManual.css'
+
 const DAY_LABELS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
 
-// parsea "HH:MM" a minutos totales
 function parseTime(hm) {
   const [h, m] = hm.split(':').map(Number)
   return h * 60 + m
@@ -25,8 +26,8 @@ function getWeekDates(base) {
   const date = typeof base === 'string'
     ? parseLocalDate(base)
     : new Date(base)
-  const day = date.getDay()          // 0 = Domingo
-  const diffToMon = (day + 6) % 7    // Domingo→6, Lunes→0…
+  const day = date.getDay()
+  const diffToMon = (day + 6) % 7
   const monday = new Date(date)
   monday.setDate(date.getDate() - diffToMon)
   return Array.from({ length: 7 }, (_, i) => {
@@ -103,7 +104,6 @@ export default function PlanillaTurnosManual() {
     load()
   }, [weekDates])
 
-  // Maneja cambios en una celda
   const handleCellChange = (crewId, dayIdx, field, val) => {
     setCells(prev => ({
       ...prev,
@@ -117,7 +117,6 @@ export default function PlanillaTurnosManual() {
     }))
   }
 
-  // Alterna “Libre” para un día
   const toggleLibre = (crewId, dayIdx) => {
     setCells(prev => ({
       ...prev,
@@ -131,20 +130,18 @@ export default function PlanillaTurnosManual() {
     }))
   }
 
-  // Calcula horas trabajadas esta semana para un crew
   const horasTrabajadas = crewId => {
     const row = cells[crewId] || {}
     let total = 0
     Object.values(row).forEach(c => {
       if (c && !c.free && c.inicio && c.fin) {
         const mins = parseTime(c.fin) - parseTime(c.inicio)
-        total += Math.max(0, mins/60 - 1)  // menos 1h colación
+        total += Math.max(0, mins/60 - 1)
       }
     })
     return +total.toFixed(1)
   }
 
-  // Guarda todos los cambios
   const saveAll = async () => {
     for (const crew of crews) {
       const row = cells[crew.id] || {}
@@ -169,40 +166,46 @@ export default function PlanillaTurnosManual() {
       }
     }
     setEditing(false)
-    // Forzar recarga de la vista
-    setExisting([])
+    setExisting([]) // fuerza recarga
   }
 
   return (
-    <div style={{ padding:'2rem' }}>
+    <div className="planilla-container">
       <h2>Calendario Manual de Turnos</h2>
-      <div style={{ marginBottom:'1rem' }}>
+
+      <div className="planilla-controls">
         <label>
           Semana:
           <input
             type="date"
             value={baseDate}
             onChange={e => setBaseDate(e.target.value)}
-            style={{ marginLeft:8 }}
           />
         </label>
-        &nbsp;&nbsp;
-        <button onClick={()=>setEditing(!editing)}>
+
+        <button
+          className="btn-edit"
+          onClick={() => setEditing(!editing)}
+        >
           {editing ? 'Cancelar' : 'Editar'}
         </button>
+
         {editing && (
-          <button onClick={saveAll} style={{ marginLeft:8 }}>
+          <button
+            className="btn-save"
+            onClick={saveAll}
+          >
             Guardar Cambios
           </button>
         )}
       </div>
 
-      <table style={table}>
+      <table className="planilla-table">
         <thead>
           <tr>
-            <th style={th}>Crew / Día</th>
+            <th>Crew / Día</th>
             {weekDates.map((d,i) => (
-              <th key={i} style={th}>
+              <th key={i}>
                 {DAY_LABELS[i]}<br/>{d.toLocaleDateString()}
               </th>
             ))}
@@ -211,15 +214,13 @@ export default function PlanillaTurnosManual() {
         <tbody>
           {crews.map(c => (
             <tr key={c.id}>
-              <td style={tdLabel}>
-                {c.nombre} ({horasTrabajadas(c.id)}/{c.horas_contrato})
-              </td>
+              <td>{c.nombre} ({horasTrabajadas(c.id)}/{c.horas_contrato})</td>
               {weekDates.map((_,i) => {
                 const cell    = cells[c.id]?.[i]
                 const dayName = DAY_LABELS[i].toLowerCase()
                 const avail   = disps[c.id]?.[dayName]
                 return (
-                  <td key={i} style={td}>
+                  <td key={i}>
                     {editing ? (
                       avail ? (
                         <>
@@ -229,7 +230,6 @@ export default function PlanillaTurnosManual() {
                             max={avail.fin}
                             value={cell?.inicio||''}
                             onChange={e=>handleCellChange(c.id,i,'inicio',e.target.value)}
-                            style={{ width:'40%' }}
                           />
                           –
                           <input
@@ -238,33 +238,28 @@ export default function PlanillaTurnosManual() {
                             max={avail.fin}
                             value={cell?.fin||''}
                             onChange={e=>handleCellChange(c.id,i,'fin',e.target.value)}
-                            style={{ width:'40%' }}
                           />
                           <button
-                            onClick={()=>toggleLibre(c.id,i)}
-                            style={{
-                              marginLeft:4,
-                              background: cell?.free ? '#0a0' : '#a00',
-                              color:'white',
-                              border:'none',
-                              padding:'2px 6px'
-                            }}
+                            className={cell?.free ? 'btn-free' : 'btn-block'}
+                            onClick={() => toggleLibre(c.id,i)}
                           >
                             {cell?.free ? 'Libre' : '⛔'}
                           </button>
                         </>
                       ) : (
-                        <span style={{ color:'crimson' }}>No disponible</span>
+                        <span className="not-available">No disponible</span>
                       )
                     ) : (
                       cell?.free ? (
-                        'Libre'
+                        <span className="free-label">Libre</span>
                       ) : cell?.inicio && cell?.fin ? (
                         `${cell.inicio}–${cell.fin}`
                       ) : avail ? (
-                        `Disp ${avail.inicio}–${avail.fin}`
+                        <span className="disp-range">
+                          Disp {avail.inicio}–{avail.fin}
+                        </span>
                       ) : (
-                        <span style={{ color:'crimson' }}>No disponible</span>
+                        <span className="not-available">No disponible</span>
                       )
                     )}
                   </td>
@@ -277,8 +272,3 @@ export default function PlanillaTurnosManual() {
     </div>
   )
 }
-
-const table   = { width:'100%', borderCollapse:'collapse', marginTop:16 }
-const th      = { border:'1px solid #ccc', padding:8, background:'#f5f5f5' }
-const td      = { border:'1px solid #ccc', padding:8, textAlign:'center' }
-const tdLabel = { ...td, fontWeight:'bold', background:'#fafafa' }
