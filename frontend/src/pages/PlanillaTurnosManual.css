@@ -1,0 +1,124 @@
+.planilla-container {
+  padding: 1rem;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+  font-family: 'Arial', sans-serif;
+  color: #3D2314;
+}
+
+/* controles (fecha, botones) */
+.planilla-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.planilla-controls input[type="date"] {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.planilla-controls button {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: opacity .2s;
+}
+
+.planilla-controls button:hover {
+  opacity: 0.9;
+}
+
+/* botón de editar/cancelar */
+.planilla-controls .btn-edit {
+  background: #FFC72C;  /* amarillo BK */
+  color: #3D2314;
+}
+
+/* botón de guardar */
+.planilla-controls .btn-save {
+  background: #E31837;  /* rojo BK */
+  color: #fff;
+}
+
+/* tabla */
+.planilla-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.planilla-table th,
+.planilla-table td {
+  border: 1px solid #3D2314;
+  padding: 8px;
+  text-align: center;
+}
+
+/* encabezados */
+.planilla-table th {
+  background: #E31837;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+/* primera columna (crew) */
+.planilla-table td:first-child {
+  background: #FFC72C;
+  color: #3D2314;
+  font-weight: bold;
+  text-align: left;
+}
+
+/* celdas de turno */
+.planilla-table td input[type="time"] {
+  width: 45%;
+  padding: 2px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+/* botón libre/⛔ dentro de celda */
+.planilla-table td button {
+  margin-left: 4px;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.planilla-table td button.btn-free {
+  background: #388E3C; /* verde BK */
+}
+.planilla-table td button.btn-block {
+  background: #A00;    /* rojo más oscuro */
+}
+
+/* estado "No disponible" */
+.not-available {
+  color: #B71C1C;
+  font-weight: bold;
+}
+
+/* etiqueta "Libre" en modo lectura */
+.free-label {
+  color: #388E3C;
+  font-weight: bold;
+}
+
+/* disponibilidad completa en modo lectura */
+.disp-range {
+  color: #3D2314;
+  font-style: italic;
+}
+
+/* filas alternas */
+.planilla-table tbody tr:nth-child(even) {
+  background: #FFF8E1; /* muy claro amarillo */
+}
