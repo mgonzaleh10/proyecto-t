@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   crearTurno,
   updateTurno,
@@ -11,6 +11,7 @@ import { getDisponibilidades } from '../api/disponibilidades'
 import './PlanillaTurnosManual.css'
 
 const DAY_LABELS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
+const FREE_KEY = 'freeMap'  // localStorage key
 
 function parseTime(hm) {
   const [h, m] = hm.split(':').map(Number)
@@ -41,69 +42,108 @@ export default function PlanillaTurnosManual() {
   const [baseDate,  setBaseDate]  = useState(new Date().toISOString().slice(0,10))
   const [weekDates, setWeekDates] = useState(getWeekDates(baseDate))
   const [crews,     setCrews]     = useState([])
-  const [existing,  setExisting]  = useState([])
   const [cells,     setCells]     = useState({})
   const [editing,   setEditing]   = useState(false)
   const [disps,     setDisps]     = useState({})
 
-  // 1) Recalcula la semana cuando cambie la fecha base
+  // Carga inicial y recarga
+  const loadData = useCallback(async () => {
+    // 1) Fetch turnos
+    const all = []
+    for (const d of weekDates) {
+      const fecha = d.toISOString().slice(0,10)
+      try {
+        const r = await getTurnosPorFecha(fecha)
+        all.push(...r.data)
+      } catch {}
+    }
+    // 2) Mapea a cells
+    const m = {}
+    all.forEach(t => {
+      const idx = weekDates.findIndex(d => d.toISOString().slice(0,10) === t.fecha.slice(0,10))
+      if (idx >= 0) {
+        m[t.usuario_id] = m[t.usuario_id] || {}
+        m[t.usuario_id][idx] = {
+          id:     t.id,
+          inicio: t.hora_inicio.slice(0,5),
+          fin:    t.hora_fin.slice(0,5),
+          free:   false
+        }
+      }
+    })
+    // 3) Reaplica “Libre” desde localStorage (por fechas)
+    const store = JSON.parse(localStorage.getItem(FREE_KEY) || '{}')
+    Object.entries(store).forEach(([uid, dates]) => {
+      const crewId = Number(uid)
+      dates.forEach(fechaStr => {
+        const idx = weekDates.findIndex(d => d.toISOString().slice(0,10) === fechaStr)
+        if (idx >= 0) {
+          m[crewId] = m[crewId] || {}
+          m[crewId][idx] = { free: true }
+        }
+      })
+    })
+    setCells(m)
+  }, [weekDates])
+
+  // 1) Semana
   useEffect(() => {
     setWeekDates(getWeekDates(baseDate))
-    setExisting([])
-    setCells({})
   }, [baseDate])
 
-  // 2) Carga los crews
+  // 2) Cuando cambian weekDates, recarga datos
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  // 3) Crews
   useEffect(() => {
     getUsuarios().then(r => setCrews(r.data)).catch(console.error)
   }, [])
 
-  // 3) Carga disponibilidades
+  // 4) Disponibilidades
   useEffect(() => {
-    getDisponibilidades().then(r => {
-      const m = {}
-      r.data.forEach(d => {
-        const dia = d.dia_semana.toLowerCase()
-        m[d.usuario_id] = m[d.usuario_id] || {}
-        m[d.usuario_id][dia] = {
-          inicio: d.hora_inicio.slice(0,5),
-          fin:    d.hora_fin.slice(0,5)
-        }
+    getDisponibilidades()
+      .then(r => {
+        const m = {}
+        r.data.forEach(d => {
+          const dia = d.dia_semana.toLowerCase()
+          m[d.usuario_id] = m[d.usuario_id] || {}
+          m[d.usuario_id][dia] = {
+            inicio: d.hora_inicio.slice(0,5),
+            fin:    d.hora_fin.slice(0,5)
+          }
+        })
+        setDisps(m)
       })
-      setDisps(m)
-    }).catch(console.error)
+      .catch(console.error)
   }, [])
 
-  // 4) Carga turnos existentes y popula cells
-  useEffect(() => {
-    async function load() {
-      const all = []
-      for (const d of weekDates) {
-        const fecha = d.toISOString().slice(0,10)
-        try {
-          const r = await getTurnosPorFecha(fecha)
-          all.push(...r.data)
-        } catch {}
-      }
-      setExisting(all)
-      const m = {}
-      all.forEach(t => {
-        const idx = weekDates.findIndex(d => d.toISOString().slice(0,10) === t.fecha.slice(0,10))
-        if (idx >= 0) {
-          m[t.usuario_id] = m[t.usuario_id] || {}
-          m[t.usuario_id][idx] = {
-            id: t.id,
-            inicio: t.hora_inicio.slice(0,5),
-            fin:    t.hora_fin.slice(0,5),
-            free:   false
+  // Alterna “Libre” y persiste en localStorage (por fecha, no por idx)
+  const toggleLibre = (crewId, dayIdx) => {
+    setCells(prev => {
+      const next = {
+        ...prev,
+        [crewId]: {
+          ...prev[crewId],
+          [dayIdx]: {
+            ...(prev[crewId]?.[dayIdx] || {}),
+            free: !prev[crewId]?.[dayIdx]?.free
           }
         }
-      })
-      setCells(m)
-    }
-    load()
-  }, [weekDates])
+      }
+      const fecha = weekDates[dayIdx].toISOString().slice(0,10)
+      const store = JSON.parse(localStorage.getItem(FREE_KEY) || '{}')
+      const arr = new Set(store[crewId] || [])
+      if (next[crewId][dayIdx].free) arr.add(fecha)
+      else arr.delete(fecha)
+      store[crewId] = Array.from(arr)
+      localStorage.setItem(FREE_KEY, JSON.stringify(store))
+      return next
+    })
+  }
 
+  // Edición de hora quita “free”
   const handleCellChange = (crewId, dayIdx, field, val) => {
     setCells(prev => ({
       ...prev,
@@ -111,25 +151,14 @@ export default function PlanillaTurnosManual() {
         ...prev[crewId],
         [dayIdx]: {
           ...prev[crewId]?.[dayIdx],
-          [field]: val
+          [field]: val,
+          free: false
         }
       }
     }))
   }
 
-  const toggleLibre = (crewId, dayIdx) => {
-    setCells(prev => ({
-      ...prev,
-      [crewId]: {
-        ...prev[crewId],
-        [dayIdx]: {
-          ...(prev[crewId]?.[dayIdx] || {}),
-          free: !prev[crewId]?.[dayIdx]?.free
-        }
-      }
-    }))
-  }
-
+  // Cálculo horas trabajadas
   const horasTrabajadas = crewId => {
     const row = cells[crewId] || {}
     let total = 0
@@ -142,6 +171,7 @@ export default function PlanillaTurnosManual() {
     return +total.toFixed(1)
   }
 
+  // Guarda todo y luego recarga inmediatamente
   const saveAll = async () => {
     for (const crew of crews) {
       const row = cells[crew.id] || {}
@@ -166,13 +196,12 @@ export default function PlanillaTurnosManual() {
       }
     }
     setEditing(false)
-    setExisting([]) // fuerza recarga
+    await loadData()
   }
 
   return (
     <div className="planilla-container">
       <h2>Calendario Manual de Turnos</h2>
-
       <div className="planilla-controls">
         <label>
           Semana:
@@ -182,24 +211,15 @@ export default function PlanillaTurnosManual() {
             onChange={e => setBaseDate(e.target.value)}
           />
         </label>
-
-        <button
-          className="btn-edit"
-          onClick={() => setEditing(!editing)}
-        >
+        <button className="btn-edit" onClick={() => setEditing(!editing)}>
           {editing ? 'Cancelar' : 'Editar'}
         </button>
-
         {editing && (
-          <button
-            className="btn-save"
-            onClick={saveAll}
-          >
+          <button className="btn-save" onClick={saveAll}>
             Guardar Cambios
           </button>
         )}
       </div>
-
       <table className="planilla-table">
         <thead>
           <tr>
@@ -214,7 +234,9 @@ export default function PlanillaTurnosManual() {
         <tbody>
           {crews.map(c => (
             <tr key={c.id}>
-              <td>{c.nombre} ({horasTrabajadas(c.id)}/{c.horas_contrato})</td>
+              <td className="first-col">
+                {c.nombre} ({horasTrabajadas(c.id)}/{c.horas_contrato})
+              </td>
               {weekDates.map((_,i) => {
                 const cell    = cells[c.id]?.[i]
                 const dayName = DAY_LABELS[i].toLowerCase()
