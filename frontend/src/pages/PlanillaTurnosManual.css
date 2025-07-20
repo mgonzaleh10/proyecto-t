@@ -122,3 +122,25 @@
 .planilla-table tbody tr:nth-child(even) {
   background: #FFF8E1; /* muy claro amarillo */
 }
+
+.free-cell-edit {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+/* Botón Libre en modo edición centrado */
+.edit-center {
+  background: #388E3C;
+  color: #fff;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Asegura que los inputs desaparezcan cuando esté en free */
+.planilla-table td input[type="time"] {
+  /* ya existe, no interferimos; la rama de free no renderiza inputs */
+}

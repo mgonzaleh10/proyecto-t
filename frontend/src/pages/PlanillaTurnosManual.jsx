@@ -11,22 +11,18 @@ import { getDisponibilidades } from '../api/disponibilidades'
 import './PlanillaTurnosManual.css'
 
 const DAY_LABELS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
-const FREE_KEY = 'freeMap'  // localStorage key
+const FREE_KEY = 'freeMap'  // key en localStorage
 
 function parseTime(hm) {
   const [h, m] = hm.split(':').map(Number)
   return h * 60 + m
 }
-
 function parseLocalDate(ymd) {
   const [y, m, d] = ymd.split('-').map(Number)
   return new Date(y, m - 1, d)
 }
-
 function getWeekDates(base) {
-  const date = typeof base === 'string'
-    ? parseLocalDate(base)
-    : new Date(base)
+  const date = typeof base === 'string' ? parseLocalDate(base) : new Date(base)
   const day = date.getDay()
   const diffToMon = (day + 6) % 7
   const monday = new Date(date)
@@ -46,9 +42,9 @@ export default function PlanillaTurnosManual() {
   const [editing,   setEditing]   = useState(false)
   const [disps,     setDisps]     = useState({})
 
-  // Carga inicial y recarga
+  // Carga/recarga de datos
   const loadData = useCallback(async () => {
-    // 1) Fetch turnos
+    // 1) Traer todos los turnos de la semana
     const all = []
     for (const d of weekDates) {
       const fecha = d.toISOString().slice(0,10)
@@ -57,7 +53,7 @@ export default function PlanillaTurnosManual() {
         all.push(...r.data)
       } catch {}
     }
-    // 2) Mapea a cells
+    // 2) Mapear a cells
     const m = {}
     all.forEach(t => {
       const idx = weekDates.findIndex(d => d.toISOString().slice(0,10) === t.fecha.slice(0,10))
@@ -71,11 +67,11 @@ export default function PlanillaTurnosManual() {
         }
       }
     })
-    // 3) Reaplica “Libre” desde localStorage (por fechas)
+    // 3) Reaplicar “Libre” desde localStorage (por fecha)
     const store = JSON.parse(localStorage.getItem(FREE_KEY) || '{}')
-    Object.entries(store).forEach(([uid, dates]) => {
+    Object.entries(store).forEach(([uid, fechas]) => {
       const crewId = Number(uid)
-      dates.forEach(fechaStr => {
+      fechas.forEach(fechaStr => {
         const idx = weekDates.findIndex(d => d.toISOString().slice(0,10) === fechaStr)
         if (idx >= 0) {
           m[crewId] = m[crewId] || {}
@@ -83,25 +79,26 @@ export default function PlanillaTurnosManual() {
         }
       })
     })
+
     setCells(m)
   }, [weekDates])
 
-  // 1) Semana
+  // Cuando cambia la semana de baseDate
   useEffect(() => {
     setWeekDates(getWeekDates(baseDate))
   }, [baseDate])
 
-  // 2) Cuando cambian weekDates, recarga datos
+  // Recarga al cambiar weekDates
   useEffect(() => {
     loadData()
   }, [loadData])
 
-  // 3) Crews
+  // Carga de crews
   useEffect(() => {
     getUsuarios().then(r => setCrews(r.data)).catch(console.error)
   }, [])
 
-  // 4) Disponibilidades
+  // Carga disponibilidades
   useEffect(() => {
     getDisponibilidades()
       .then(r => {
@@ -119,7 +116,7 @@ export default function PlanillaTurnosManual() {
       .catch(console.error)
   }, [])
 
-  // Alterna “Libre” y persiste en localStorage (por fecha, no por idx)
+  // Alternar Libre y guardar en localStorage
   const toggleLibre = (crewId, dayIdx) => {
     setCells(prev => {
       const next = {
@@ -134,16 +131,16 @@ export default function PlanillaTurnosManual() {
       }
       const fecha = weekDates[dayIdx].toISOString().slice(0,10)
       const store = JSON.parse(localStorage.getItem(FREE_KEY) || '{}')
-      const arr = new Set(store[crewId] || [])
-      if (next[crewId][dayIdx].free) arr.add(fecha)
-      else arr.delete(fecha)
-      store[crewId] = Array.from(arr)
+      const setFechas = new Set(store[crewId] || [])
+      if (next[crewId][dayIdx].free) setFechas.add(fecha)
+      else setFechas.delete(fecha)
+      store[crewId] = Array.from(setFechas)
       localStorage.setItem(FREE_KEY, JSON.stringify(store))
       return next
     })
   }
 
-  // Edición de hora quita “free”
+  // Al editar hora, quitar free
   const handleCellChange = (crewId, dayIdx, field, val) => {
     setCells(prev => ({
       ...prev,
@@ -158,7 +155,7 @@ export default function PlanillaTurnosManual() {
     }))
   }
 
-  // Cálculo horas trabajadas
+  // Calcular horas trabajadas
   const horasTrabajadas = crewId => {
     const row = cells[crewId] || {}
     let total = 0
@@ -171,7 +168,7 @@ export default function PlanillaTurnosManual() {
     return +total.toFixed(1)
   }
 
-  // Guarda todo y luego recarga inmediatamente
+  // Guardar todo y recargar
   const saveAll = async () => {
     for (const crew of crews) {
       const row = cells[crew.id] || {}
@@ -202,6 +199,7 @@ export default function PlanillaTurnosManual() {
   return (
     <div className="planilla-container">
       <h2>Calendario Manual de Turnos</h2>
+
       <div className="planilla-controls">
         <label>
           Semana:
@@ -220,6 +218,7 @@ export default function PlanillaTurnosManual() {
           </button>
         )}
       </div>
+
       <table className="planilla-table">
         <thead>
           <tr>
@@ -245,29 +244,42 @@ export default function PlanillaTurnosManual() {
                   <td key={i}>
                     {editing ? (
                       avail ? (
-                        <>
-                          <input
-                            type="time"
-                            min={avail.inicio}
-                            max={avail.fin}
-                            value={cell?.inicio||''}
-                            onChange={e=>handleCellChange(c.id,i,'inicio',e.target.value)}
-                          />
-                          –
-                          <input
-                            type="time"
-                            min={avail.inicio}
-                            max={avail.fin}
-                            value={cell?.fin||''}
-                            onChange={e=>handleCellChange(c.id,i,'fin',e.target.value)}
-                          />
-                          <button
-                            className={cell?.free ? 'btn-free' : 'btn-block'}
-                            onClick={() => toggleLibre(c.id,i)}
-                          >
-                            {cell?.free ? 'Libre' : '⛔'}
-                          </button>
-                        </>
+                        cell?.free ? (
+                          //  → CELDA LIBRE: botón centrado y sin inputs
+                          <div className="free-cell-edit">
+                            <button
+                              className="btn-free edit-center"
+                              onClick={() => toggleLibre(c.id,i)}
+                            >
+                              Libre
+                            </button>
+                          </div>
+                        ) : (
+                          //  → CELDA NORMAL: inputs + “⛔”
+                          <>
+                            <input
+                              type="time"
+                              min={avail.inicio}
+                              max={avail.fin}
+                              value={cell?.inicio||''}
+                              onChange={e=>handleCellChange(c.id,i,'inicio',e.target.value)}
+                            />
+                            –
+                            <input
+                              type="time"
+                              min={avail.inicio}
+                              max={avail.fin}
+                              value={cell?.fin||''}
+                              onChange={e=>handleCellChange(c.id,i,'fin',e.target.value)}
+                            />
+                            <button
+                              className="btn-block"
+                              onClick={() => toggleLibre(c.id,i)}
+                            >
+                              ⛔
+                            </button>
+                          </>
+                        )
                       ) : (
                         <span className="not-available">No disponible</span>
                       )
