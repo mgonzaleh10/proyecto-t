@@ -2,12 +2,13 @@ import React, { useState } from 'react'; // Importo React y useState
 import { crearUsuario } from '../api/usuarios'; // Importo función para crear usuario
 
 export default function NuevoUsuario({ onNueva }) {
-  // Defino estado del formulario con valores iniciales
+  // Defino estado del formulario con valores iniciales, incluyendo birthday
   const [form, setForm] = useState({
     nombre: '',
     correo: '',
     horas_contrato: 45,
     puede_cerrar: false,
+    cumpleaños: ''  // ← Nuevo campo
   });
   const [error, setError] = useState(null); // Estado para mostrar errores
 
@@ -25,13 +26,23 @@ export default function NuevoUsuario({ onNueva }) {
     e.preventDefault();
     setError(null);
     try {
-      // Registro el nuevo usuario en el backend
+      // Registro el nuevo usuario en el backend, incluyendo cumpleaños
       await crearUsuario({
-        ...form,
+        nombre: form.nombre,
+        correo: form.correo,
+        horas_contrato: form.horas_contrato,
+        puede_cerrar: form.puede_cerrar,
+        cumpleaños: form.cumpleaños,
         contrasena: 'pass123' // Asigno contraseña por defecto
       });
       // Reinicio el formulario
-      setForm({ nombre:'', correo:'', horas_contrato:45, puede_cerrar:false });
+      setForm({
+        nombre: '',
+        correo: '',
+        horas_contrato: 45,
+        puede_cerrar: false,
+        cumpleaños: ''
+      });
       onNueva(); // Notifico al padre que hay un nuevo usuario
     } catch (err) {
       console.error(err);
@@ -44,11 +55,9 @@ export default function NuevoUsuario({ onNueva }) {
       onSubmit={handleSubmit}
       style={{ marginTop: '1rem', padding: '1rem', border: '1px solid #ccc' }}
     >
-      <h3>Agregar nuevo Crew</h3> {/* Título del formulario */}
-      {/* Muestro error si existe */}
+      <h3>Agregar nuevo Crew</h3>
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
-      {/* Input de nombre */}
       <div>
         <label>Nombre:
           <input
@@ -60,7 +69,6 @@ export default function NuevoUsuario({ onNueva }) {
         </label>
       </div>
 
-      {/* Input de correo */}
       <div>
         <label>Correo:
           <input
@@ -73,7 +81,6 @@ export default function NuevoUsuario({ onNueva }) {
         </label>
       </div>
 
-      {/* Select de horas de contrato */}
       <div>
         <label>Horas contrato:
           <select
@@ -89,7 +96,6 @@ export default function NuevoUsuario({ onNueva }) {
         </label>
       </div>
 
-      {/* Checkbox de permiso para cerrar */}
       <div>
         <label>
           <input
@@ -101,7 +107,17 @@ export default function NuevoUsuario({ onNueva }) {
         </label>
       </div>
 
-      {/* Botón para crear nuevo crew */}
+      <div>
+        <label>Cumpleaños:
+          <input
+            type="date"
+            name="cumpleaños"
+            value={form.cumpleaños}
+            onChange={handleChange}
+          />
+        </label>
+      </div>
+
       <button type="submit" style={{ marginTop: '0.5rem' }}>
         ➕ Crear Crew
       </button>

@@ -10,7 +10,8 @@ export default function UsuariosPage() {
     nombre: '',
     correo: '',
     horas_contrato: 45,
-    puede_cerrar: false
+    puede_cerrar: false,
+    cumpleaños: ''    // ← Incluimos cumpleaños en el formulario de edición
   });
 
   const fetchUsuarios = async () => {
@@ -28,7 +29,6 @@ export default function UsuariosPage() {
   }, []);
 
   const handleDelete = async (id) => {
-    // ✨ MENSAJE MÁS CLARO: indico que se borrarán sus disponibilidades y turnos
     if (!window.confirm(
       '¿Estás seguro de eliminar este crew? Se borrarán también sus disponibilidades, beneficios y turnos asociados. Esta acción NO se puede deshacer.'
     )) return;
@@ -48,7 +48,8 @@ export default function UsuariosPage() {
       nombre: u.nombre,
       correo: u.correo,
       horas_contrato: u.horas_contrato,
-      puede_cerrar: u.puede_cerrar
+      puede_cerrar: u.puede_cerrar,
+      cumpleaños: u.cumpleaños ? u.cumpleaños.slice(0,10) : ''  // ← prellenamos cumpleaños
     });
     setError(null);
   };
@@ -79,9 +80,10 @@ export default function UsuariosPage() {
       <h2>Gestión de Crews</h2>
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
+      {/* Formulario de creación */}
       <NuevoUsuario onNueva={fetchUsuarios} />
 
-      <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', marginTop: '1rem' }}>
+      <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', marginTop: '1rem', width: '100%' }}>
         <thead>
           <tr>
             <th>ID</th>
@@ -89,6 +91,7 @@ export default function UsuariosPage() {
             <th>Correo</th>
             <th>Horas Contrato</th>
             <th>Puede cerrar</th>
+            <th>Cumpleaños</th> {/* ← Nueva columna */}
             <th>Acciones</th>
           </tr>
         </thead>
@@ -96,18 +99,24 @@ export default function UsuariosPage() {
           {usuarios.map(u => (
             <tr key={u.id}>
               <td>{u.id}</td>
+
+              {/* Nombre */}
               <td>
                 {editId === u.id
                   ? <input name="nombre" value={editForm.nombre} onChange={handleEditChange} />
                   : u.nombre
                 }
               </td>
+
+              {/* Correo */}
               <td>
                 {editId === u.id
                   ? <input type="email" name="correo" value={editForm.correo} onChange={handleEditChange} />
                   : u.correo
                 }
               </td>
+
+              {/* Horas contrato */}
               <td>
                 {editId === u.id
                   ? (
@@ -125,6 +134,8 @@ export default function UsuariosPage() {
                   : u.horas_contrato
                 }
               </td>
+
+              {/* Puede cerrar */}
               <td>
                 {editId === u.id
                   ? <input
@@ -136,18 +147,36 @@ export default function UsuariosPage() {
                   : (u.puede_cerrar ? 'Sí' : 'No')
                 }
               </td>
+
+              {/* Cumpleaños */}
+              <td>
+                {editId === u.id
+                  ? <input
+                      type="date"
+                      name="cumpleaños"
+                      value={editForm.cumpleaños}
+                      onChange={handleEditChange}
+                    />
+                  : (u.cumpleaños 
+                      ? new Date(u.cumpleaños).toLocaleDateString() 
+                      : '—'
+                    )
+                }
+              </td>
+
+              {/* Acciones */}
               <td>
                 {editId === u.id
                   ? (
                     <>
                       <button onClick={() => handleEditSubmit(u.id)}>💾 Guardar</button>
-                      <button onClick={() => setEditId(null)}>❌ Cancelar</button>
+                      <button onClick={() => setEditId(null)} style={{ marginLeft: '0.5rem' }}>❌ Cancelar</button>
                     </>
                   )
                   : (
                     <>
                       <button onClick={() => handleEditClick(u)}>✏️ Editar</button>
-                      <button onClick={() => handleDelete(u.id)}>🗑️ Eliminar</button>
+                      <button onClick={() => handleDelete(u.id)} style={{ marginLeft: '0.5rem' }}>🗑️ Eliminar</button>
                     </>
                   )
                 }
