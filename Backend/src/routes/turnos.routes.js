@@ -1,5 +1,5 @@
-const express = require('express');
-const router = express.Router();
+const express = require('express')
+const router = express.Router()
 const {
   registrarTurno,
   listarTurnos,
@@ -10,27 +10,27 @@ const {
   actualizarTurno,
   eliminarTurno,
   eliminarTodos,
-  enviarCalendario
-} = require('../controllers/turnos.controller');
+  enviarCalendario     // ◀ importamos el handler
+} = require('../controllers/turnos.controller')
 
 // CRUD
-router.post('/', registrarTurno);
-router.get('/', listarTurnos);
-router.get('/:id', turnosPorUsuario);
-router.get('/fecha/:fecha', turnosPorFecha);
-router.put('/:id', actualizarTurno);
+router.post('/', registrarTurno)
+router.get('/', listarTurnos)
+router.get('/:id', turnosPorUsuario)
+router.get('/fecha/:fecha', turnosPorFecha)
+router.put('/:id', actualizarTurno)
 
 // Generación automática
-router.post('/generar', generarHorario);
+router.post('/generar', generarHorario)
 
 // Intercambio
-router.post('/intercambio', recomendarIntercambio);
+router.post('/intercambio', recomendarIntercambio)
 
 // Borrado
-router.delete('/:id', eliminarTurno);
-router.delete('/', eliminarTodos);
+router.delete('/:id', eliminarTurno)
+router.delete('/', eliminarTodos)
 
 // Envío de calendario por correo
-router.post('/enviar-correo', enviarCalendario);
+router.post('/enviar-correo', enviarCalendario)
 
-module.exports = router;
+module.exports = router
