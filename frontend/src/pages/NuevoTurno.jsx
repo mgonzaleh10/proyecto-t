@@ -1,40 +1,36 @@
-import React, { useState } from 'react'; // Importo React y useState
-import { crearTurno } from '../api/turnos'; // Importo función para crear un turno
+import React, { useState } from 'react';
+import { crearTurno } from '../api/turnos';
 
 export default function NuevoTurno() {
-  // Defino estado del formulario con valores por defecto
   const [form, setForm] = useState({
     usuario_id: '',
     fecha: '',
     hora_inicio: '',
     hora_fin: '',
-    creado_por: '19',      // ← valor por defecto
+    creado_por: '19',
     observaciones: ''
   });
-  const [mensaje, setMensaje] = useState(null); // Estado para mostrar mensajes de éxito
-  const [error, setError] = useState(null);     // Estado para mostrar errores
+  const [mensaje, setMensaje] = useState(null);
+  const [error, setError] = useState(null);
 
-  // Actualizo el estado del formulario al cambiar inputs
   const handleChange = e => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Manejo el envío del formulario
   const handleSubmit = async e => {
     e.preventDefault();
     setMensaje(null);
     setError(null);
+
     const { usuario_id, fecha, hora_inicio, hora_fin } = form;
-    // Valido campos obligatorios
     if (!usuario_id || !fecha || !hora_inicio || !hora_fin) {
       setError('Completa los campos obligatorios');
       return;
     }
+
     try {
-      // Registro el turno en el backend
       const res = await crearTurno(form);
-      setMensaje(`Turno creado con ID: ${res.data.id}`); // Muestro ID creado
-      // Reinicio el formulario
+      setMensaje(`Turno creado con ID: ${res.data[0]?.id || res.data.id}`);
       setForm({
         usuario_id: '',
         fecha: '',
@@ -45,16 +41,15 @@ export default function NuevoTurno() {
       });
     } catch (err) {
       console.error(err);
-      setError('Error al crear el turno'); // Muestro error si falla
+      // Muestro el mensaje de error que envía el servidor (400) o un genérico
+      setError(err.response?.data?.error || 'Error al crear el turno');
     }
   };
 
   return (
-    <div style={{ padding: '2rem' }}> {/* Contenedor principal */}
-      <h2>Crear Turno Manual</h2> {/* Título de la sección */}
-
+    <div style={{ padding: '2rem' }}>
+      <h2>Crear Turno Manual</h2>
       <form onSubmit={handleSubmit} style={{ maxWidth: 400 }}>
-        {/* Input de ID de crew */}
         <label>
           Crew (ID):
           <input
@@ -65,9 +60,7 @@ export default function NuevoTurno() {
             required
           />
         </label>
-        <br/>
-
-        {/* Input de fecha */}
+        <br />
         <label>
           Fecha:
           <input
@@ -78,9 +71,7 @@ export default function NuevoTurno() {
             required
           />
         </label>
-        <br/>
-
-        {/* Input de hora de inicio */}
+        <br />
         <label>
           Hora inicio:
           <input
@@ -91,9 +82,7 @@ export default function NuevoTurno() {
             required
           />
         </label>
-        <br/>
-
-        {/* Input de hora de fin */}
+        <br />
         <label>
           Hora fin:
           <input
@@ -104,16 +93,8 @@ export default function NuevoTurno() {
             required
           />
         </label>
-        <br/>
-
-        {/* Campo oculto de creado_por */}
-        <input
-          type="hidden"
-          name="creado_por"
-          value={form.creado_por}
-        />
-
-        {/* Textarea de observaciones */}
+        <br />
+        <input type="hidden" name="creado_por" value={form.creado_por} />
         <label>
           Observaciones:
           <textarea
@@ -123,18 +104,15 @@ export default function NuevoTurno() {
             rows="2"
           />
         </label>
-        <br/>
-
-        {/* Botón para crear turno */}
+        <br />
         <button type="submit" style={{ marginTop: '1rem' }}>
           Crear Turno
         </button>
       </form>
 
-      {/* Muestro mensaje de éxito */}
+      {/* Muestro mensaje de éxito o de error según corresponda */}
       {mensaje && <p style={{ color: 'green' }}>{mensaje}</p>}
-      {/* Muestro mensaje de error */}
-      {error   && <p style={{ color: 'red' }}>{error}</p>}
+      {error && <p style={{ color: 'red' }}>{error}</p>}
     </div>
   );
 }
