@@ -1,9 +1,9 @@
-const db = require('../config/db');
+const db = require('../config/db'); // Importo la conexión a la base de datos
 
-// Nombres de días para mapear fechas
+// Mapeo nombres de días para convertir fechas a día de la semana
 const DIAS = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
 
-// Reglas por tipo de contrato
+// Defino reglas según tipo de contrato
 const REGLAS = {
   45: { diasSemana: 5, domingosPorMes: 2 },
   30: { diasSemana: 5, domingosPorMes: 2 },
@@ -11,13 +11,13 @@ const REGLAS = {
   16: { diasSemana: 2, soloDias: ['sábado','domingo'], domingosPorMes: 0 }
 };
 
-// Convierte "HH:MM" o "HH:MM:SS" a minutos
+// Convierto "HH:MM" o "HH:MM:SS" a minutos desde medianoche
 function parseTime(t) {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
 }
 
-// Calcula horas trabajadas, restando 1h de colación
+// Calculo horas trabajadas, restando 1h de colación
 function calcularHoras(turno) {
   const start = parseTime(turno.hora_inicio);
   const end   = parseTime(turno.hora_fin);
@@ -25,7 +25,7 @@ function calcularHoras(turno) {
   return Math.max(0, dur - 1);
 }
 
-// Comprueba solapamiento contra un array de turnos
+// Compruebo si un turno se solapa con otros turnos
 function tieneSolapamiento(turno, otros) {
   return otros.some(t => {
     if (t.fecha !== turno.fecha) return false;
@@ -35,56 +35,57 @@ function tieneSolapamiento(turno, otros) {
   });
 }
 
-// Comprueba si un turno cabe dentro de la disponibilidad registrada
+// Compruebo si un turno cabe dentro de la disponibilidad registrada
 function dentroDisponibilidad(turno, disp) {
   return parseTime(disp.hora_inicio) <= parseTime(turno.hora_inicio)
       && parseTime(disp.hora_fin)   >= parseTime(turno.hora_fin);
 }
 
 /**
- * Comprueba todas las reglas para ver si `usuario` podría tomar `turno`
+ * Compruebo todas las reglas para ver si `usuario` podría tomar `turno`
  */
 function puedeAsignarShift(usuario, turno, dispMap, beneMap, shifts) {
-  // protección: si usuario indefinido, devolvemos false
-  if (!usuario) return false;
+  if (!usuario) return false; // Protejo contra usuario indefinido
 
   const diaNombre = DIAS[new Date(turno.fecha).getDay()];
   const disp = dispMap[usuario.id]?.[diaNombre];
-  if (!disp) return false;
+  if (!disp) return false; // Compruebo existencia de disponibilidad
 
   if (!dentroDisponibilidad(turno, disp)) return false;
-  if (beneMap[usuario.id]?.has(turno.fecha)) return false;
+  if (beneMap[usuario.id]?.has(turno.fecha)) return false; // Compruebo beneficio
 
   const regla = REGLAS[usuario.horas_contrato];
-  if (!regla) return false;
+  if (!regla) return false; // Compruebo regla de contrato
 
   if (regla.soloDias && !regla.soloDias.includes(diaNombre)) return false;
-
   if (diaNombre === 'domingo') {
+    // Cuento domingos asignados para no exceder el máximo
     const domingosAsignados = shifts.filter(t => new Date(t.fecha).getDay() === 0).length;
     if (domingosAsignados >= regla.domingosPorMes) return false;
   }
 
+  // Calculo horas ya usadas y compruebo si caben las horas de este turno
   const usadas = shifts.reduce((sum, t) => sum + calcularHoras(t), 0);
   if (usadas + calcularHoras(turno) > usuario.horas_contrato) return false;
 
+  // Compruebo permiso de cerrar si el turno es en la tarde
   if (parseTime(turno.hora_inicio) >= parseTime('16:30') && !usuario.puede_cerrar) {
     return false;
   }
 
+  // Compruebo solapamientos con otros turnos
   if (tieneSolapamiento(turno, shifts)) return false;
 
-  return true;
+  return true; // Paso todas las comprobaciones
 }
 
 /**
- * Dado un turno “origen”, sugiere posibles intercambios contra cualquier otro turno
- * de la misma semana.
+ * Dado un turno “origen”, sugiero posibles intercambios contra cualquier otro turno de la misma semana.
  */
 async function sugerirIntercambio(turnoOrigen) {
-  // 1) rango lunes–domingo
+  // Calculo rango de lunes a domingo de la misma semana
   const d0 = new Date(turnoOrigen.fecha);
-  const dia  = d0.getDay();              // 0=dom
+  const dia  = d0.getDay();             
   const lunes = new Date(d0);
   lunes.setDate(d0.getDate() - ((dia + 6) % 7));
   const domingo = new Date(lunes);
@@ -92,7 +93,7 @@ async function sugerirIntercambio(turnoOrigen) {
   const startWeek = lunes.toISOString().slice(0,10);
   const endWeek   = domingo.toISOString().slice(0,10);
 
-  // 2) cargo datos
+  // Cargo usuarios, disponibilidades, beneficios y turnos de la semana
   const { rows: usuarios } = await db.query(
     'SELECT id, horas_contrato, puede_cerrar FROM usuarios'
   );
@@ -103,7 +104,7 @@ async function sugerirIntercambio(turnoOrigen) {
     [startWeek, endWeek]
   );
 
-  // 3) índices de ayuda
+  // Construyo índices de ayuda para disponibilidades y beneficios
   const dispMap = {};
   disponibilidades.forEach(d => {
     dispMap[d.usuario_id] ||= {};
@@ -114,6 +115,8 @@ async function sugerirIntercambio(turnoOrigen) {
     beneMap[b.usuario_id] ||= new Set();
     beneMap[b.usuario_id].add(b.fecha.toISOString().slice(0,10));
   });
+
+  // Agrupo turnos por usuario
   const turnsByUser = {};
   turnsWeek.forEach(t => {
     turnsByUser[t.usuario_id] ||= [];
@@ -125,15 +128,15 @@ async function sugerirIntercambio(turnoOrigen) {
   const userX = usuarios.find(u => u.id === idX);
   if (!userX) {
     console.warn(`Usuario origen ${idX} no encontrado en usuarios.`);
-    return [];
+    return []; // Si no encuentro al usuario origen, no sugiero nada
   }
-  // quito de shiftsX el turnoOrigen mismo
+  // Preparo lista de turnos de X sin incluir el turno origen
   const shiftsX = (turnsByUser[idX] || [])
     .filter(t => !(t.fecha === turnoOrigen.fecha && t.hora_inicio === turnoOrigen.hora_inicio));
 
-  // 4) para cada turno T de la semana
+  // Recorro cada turno de la semana para evaluar intercambio
   for (const t of turnsWeek) {
-    if (t.usuario_id === idX) continue;
+    if (t.usuario_id === idX) continue; // Omito turnos del mismo usuario
 
     const userY = usuarios.find(u => u.id === t.usuario_id);
     if (!userY) {
@@ -141,29 +144,29 @@ async function sugerirIntercambio(turnoOrigen) {
       continue;
     }
 
-    // turnos de Y sin el turno t
+    // Preparo lista de turnos de Y sin incluir el turno candidato
     const shiftsY = (turnsByUser[userY.id] || [])
       .filter(uT => !(uT.fecha === t.fecha && uT.hora_inicio === t.hora_inicio));
 
-    // a) ¿puede Y cubrir el turnoOrigen?
+    // Compruebo si Y puede cubrir el turno origen
     if (!puedeAsignarShift(userY, turnoOrigen, dispMap, beneMap, shiftsY)) {
       continue;
     }
 
-    // b) ¿puede X cubrir el turno de Y?
+    // Compruebo si X puede cubrir el turno de Y
     const turnoDestino = { fecha: t.fecha, hora_inicio: t.hora_inicio, hora_fin: t.hora_fin };
     if (!puedeAsignarShift(userX, turnoDestino, dispMap, beneMap, shiftsX)) {
       continue;
     }
 
-    // c) ambos pasan => sugerido
+    // Si ambos pueden, agrego la sugerencia
     sugeridos.push({
       usuario_id:   userY.id,
       turnoDestino
     });
   }
 
-  return sugeridos;
+  return sugeridos; // Devuelvo la lista de sugerencias
 }
 
-module.exports = { sugerirIntercambio };
+module.exports = { sugerirIntercambio }; // Exporto la función de recomendaciones

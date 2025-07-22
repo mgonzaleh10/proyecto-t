@@ -1,3 +1,4 @@
+// Importo express y creo el router
 const express = require('express');
 const router = express.Router();
 const {
@@ -9,24 +10,32 @@ const {
   recomendarIntercambio,
   actualizarTurno,
   eliminarTurno,
-  eliminarTodos
+  eliminarTodos,
+  enviarCalendario
 } = require('../controllers/turnos.controller');
 
-// CRUD
+// Registro uno o varios turnos
 router.post('/', registrarTurno);
+// Obtengo todos los turnos
 router.get('/', listarTurnos);
+// Obtengo turnos de un usuario por ID
 router.get('/:id', turnosPorUsuario);
+// Obtengo turnos por fecha específica
 router.get('/fecha/:fecha', turnosPorFecha);
+// Actualizo un turno por ID
 router.put('/:id', actualizarTurno);
 
-// Generación automática
+// Genero el horario automáticamente
 router.post('/generar', generarHorario);
-
-// Intercambio
+// Sugiero intercambios de turnos
 router.post('/intercambio', recomendarIntercambio);
 
-// Borrado
+// Elimino un turno por ID
 router.delete('/:id', eliminarTurno);
+// Elimino todos los turnos
 router.delete('/', eliminarTodos);
 
-module.exports = router;
+// Envío por correo el calendario de turnos
+router.post('/enviar-correo', enviarCalendario);
+
+module.exports = router; // Exporto el router de turnos

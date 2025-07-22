@@ -1,3 +1,4 @@
+// Importo express y creo el router
 const express = require('express');
 const router = express.Router();
 const {
@@ -6,13 +7,11 @@ const {
   eliminarUsuario
 } = require('../controllers/usuarios.controller');
 
-// Crear nuevo crew
+// Creo un nuevo usuario
 router.post('/', crearUsuario);
-
-// Listar todos los crews
+// Obtengo todos los usuarios
 router.get('/', listarUsuarios);
-
-// Eliminar crew por ID
+// Elimino un usuario por ID
 router.delete('/:id', eliminarUsuario);
 
-module.exports = router;
+module.exports = router; // Exporto el router de usuarios

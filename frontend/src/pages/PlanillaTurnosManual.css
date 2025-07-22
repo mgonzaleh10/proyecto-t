@@ -1,89 +1,110 @@
+/* Contenedor principal de la planilla */
 .planilla-container {
-  padding: 1rem;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  font-family: 'Arial', sans-serif;
-  color: #3D2314;
+  padding: 1rem; /* Aplico espacio interno */
+  background: #fff; /* Fondo blanco para contraste */
+  border-radius: 8px; /* Bordes redondeados */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15); /* Sombra suave */
+  font-family: 'Arial', sans-serif; /* Fuente legible */
+  color: #3D2314; /* Color de texto principal */
 }
 
-/* controles (fecha, botones) */
+/* Barra de controles (fecha, botones) */
 .planilla-controls {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  display: flex; /* Alineo controles en fila */
+  align-items: center; /* Centrado vertical */
+  gap: 1rem; /* Separación entre elementos */
+  margin-bottom: 1rem; /* Espacio debajo */
 }
 
+/* Input de fecha dentro de controles */
 .planilla-controls input[type="date"] {
-  padding: 4px 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 4px 8px; /* Espacio interno */
+  border: 1px solid #ccc; /* Borde gris claro */
+  border-radius: 4px; /* Bordes suaves */
 }
 
+/* Estilo general de botones en controles */
 .planilla-controls button {
   padding: 6px 12px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
-  transition: opacity .2s;
+  transition: opacity .2s; /* Efecto hover suave */
 }
 
-.planilla-controls button:hover {
-  opacity: 0.9;
-}
-
-/* botón de editar/cancelar */
+/* Botón de editar */
 .planilla-controls .btn-edit {
-  background: #FFC72C;  /* amarillo BK */
-  color: #3D2314;
+  background: #FFC72C; /* Amarillo BK */
+  color: #3D2314;      /* Marrón oscuro */
 }
 
-/* botón de guardar */
+/* Botón de guardar cambios */
 .planilla-controls .btn-save {
-  background: #E31837;  /* rojo BK */
-  color: #fff;
+  background: #E31837; /* Rojo BK */
+  color: #fff;         /* Texto blanco */
 }
 
-/* tabla */
+/* Tabla de turnos */
 .planilla-table {
-  width: 100%;
-  border-collapse: collapse;
+  width: 100%; /* Ocupo todo el ancho */
+  border-collapse: collapse; /* Sin espacios entre celdas */
   margin-top: 1rem;
 }
 
+/* Celdas y encabezados de tabla */
 .planilla-table th,
 .planilla-table td {
-  border: 1px solid #3D2314;
+  border: 1px solid #3D2314; /* Borde marrón */
   padding: 8px;
   text-align: center;
 }
 
-/* encabezados */
+/* Encabezados */
 .planilla-table th {
-  background: #E31837;
-  color: #fff;
+  background: #8a4221; /* Marrón oscuro */
+  color: #fff;         /* Blanco para contraste */
   font-size: 0.9rem;
 }
 
-/* primera columna (crew) */
-.planilla-table td:first-child {
-  background: #FFC72C;
+/* Primera columna (nombres de crew) */
+.planilla-table td.first-col {
+  background: #fff3c7; /* Amarillo claro */
   color: #3D2314;
   font-weight: bold;
   text-align: left;
 }
 
-/* celdas de turno */
-.planilla-table td input[type="time"] {
-  width: 45%;
-  padding: 2px;
-  border: 1px solid #ccc;
-  border-radius: 3px;
+/* Celda con turno asignado */
+.planilla-table td.assigned-cell {
+  background-color: #FFE0B2; /* Sutil naranja */
 }
 
-/* botón libre/⛔ dentro de celda */
+/* Celda libre */
+.planilla-table td.free-cell {
+  background-color: #005c05; /* Verde oscuro */
+  color: #fff; /* Texto blanco */
+}
+
+/* Texto de no disponibilidad */
+.not-available {
+  color: #B71C1C; /* Rojo intenso */
+  font-weight: bold;
+}
+
+/* Etiqueta 'Libre' en vista no edición */
+.free-label {
+  color: #fff;      /* Blanco sobre verde */
+  font-weight: bold;
+}
+
+/* Rango de disponibilidad cuando no está asignado */
+.disp-range {
+  color: #3D2314;  /* Marrón */
+  font-style: italic;
+}
+
+/* Botones dentro de celdas */
 .planilla-table td button {
   margin-left: 4px;
   padding: 2px 6px;
@@ -93,49 +114,31 @@
   font-size: 0.8rem;
   cursor: pointer;
 }
-.planilla-table td button.btn-free {
-  background: #388E3C; /* verde BK */
-}
-.planilla-table td button.btn-block {
-  background: #A00;    /* rojo más oscuro */
+
+/* Botón para marcar celda libre */
+.planilla-table td .btn-free {
+  background: #388E3C; /* Verde medio */
 }
 
-/* estado "No disponible" */
-.not-available {
-  color: #B71C1C;
-  font-weight: bold;
+/* Botón para bloquear turno */
+.planilla-table td .btn-block {
+  background: #A00; /* Rojo oscuro */
 }
 
-/* etiqueta "Libre" en modo lectura */
-.free-label {
-  color: #388E3C;
-  font-weight: bold;
-}
-
-/* disponibilidad completa en modo lectura */
-.disp-range {
-  color: #3D2314;
-  font-style: italic;
-}
-
-/* filas alternas */
-.planilla-table tbody tr:nth-child(even) {
-  background: #FFF8E1; /* muy claro amarillo */
-}
-
+/* Contenedor para edición de celda libre */
 .free-cell-edit {
   display: flex;
   justify-content: center;
-  align-items: center;
-  height: 100%;
 }
 
-/* Botón Libre en modo edición centrado */
-.edit-center {
-  background: #388E3C;
+/* Centrado interno del botón libre */
+.free-cell-edit .edit-center {
+  margin: 0;
+}
+
+/* Botón de envío de correo */
+.planilla-controls .btn-email {
+  background: #0066cc; /* Azul BK */
   color: #fff;
-  border: none;
-  padding: 4px 8px;
-  border-radius: 4px;
-  cursor: pointer;
+  margin-left: 0.5rem;
 }

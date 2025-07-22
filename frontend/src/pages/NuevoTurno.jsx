@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { crearTurno } from '../api/turnos';
+import React, { useState } from 'react'; // Importo React y useState
+import { crearTurno } from '../api/turnos'; // Importo función para crear un turno
 
 export default function NuevoTurno() {
+  // Defino estado del formulario con valores por defecto
   const [form, setForm] = useState({
     usuario_id: '',
     fecha: '',
@@ -10,25 +11,30 @@ export default function NuevoTurno() {
     creado_por: '19',      // ← valor por defecto
     observaciones: ''
   });
-  const [mensaje, setMensaje] = useState(null);
-  const [error, setError] = useState(null);
+  const [mensaje, setMensaje] = useState(null); // Estado para mostrar mensajes de éxito
+  const [error, setError] = useState(null);     // Estado para mostrar errores
 
+  // Actualizo el estado del formulario al cambiar inputs
   const handleChange = e => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // Manejo el envío del formulario
   const handleSubmit = async e => {
     e.preventDefault();
     setMensaje(null);
     setError(null);
     const { usuario_id, fecha, hora_inicio, hora_fin } = form;
+    // Valido campos obligatorios
     if (!usuario_id || !fecha || !hora_inicio || !hora_fin) {
       setError('Completa los campos obligatorios');
       return;
     }
     try {
+      // Registro el turno en el backend
       const res = await crearTurno(form);
-      setMensaje(`Turno creado con ID: ${res.data.id}`);
+      setMensaje(`Turno creado con ID: ${res.data.id}`); // Muestro ID creado
+      // Reinicio el formulario
       setForm({
         usuario_id: '',
         fecha: '',
@@ -39,15 +45,16 @@ export default function NuevoTurno() {
       });
     } catch (err) {
       console.error(err);
-      setError('Error al crear el turno');
+      setError('Error al crear el turno'); // Muestro error si falla
     }
   };
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h2>Crear Turno Manual</h2>
+    <div style={{ padding: '2rem' }}> {/* Contenedor principal */}
+      <h2>Crear Turno Manual</h2> {/* Título de la sección */}
 
       <form onSubmit={handleSubmit} style={{ maxWidth: 400 }}>
+        {/* Input de ID de crew */}
         <label>
           Crew (ID):
           <input
@@ -60,6 +67,7 @@ export default function NuevoTurno() {
         </label>
         <br/>
 
+        {/* Input de fecha */}
         <label>
           Fecha:
           <input
@@ -72,6 +80,7 @@ export default function NuevoTurno() {
         </label>
         <br/>
 
+        {/* Input de hora de inicio */}
         <label>
           Hora inicio:
           <input
@@ -84,6 +93,7 @@ export default function NuevoTurno() {
         </label>
         <br/>
 
+        {/* Input de hora de fin */}
         <label>
           Hora fin:
           <input
@@ -96,13 +106,14 @@ export default function NuevoTurno() {
         </label>
         <br/>
 
-        {/* ocultamos el campo creado_por o lo dejamos solo lectura */}
+        {/* Campo oculto de creado_por */}
         <input
           type="hidden"
           name="creado_por"
           value={form.creado_por}
         />
 
+        {/* Textarea de observaciones */}
         <label>
           Observaciones:
           <textarea
@@ -114,12 +125,15 @@ export default function NuevoTurno() {
         </label>
         <br/>
 
+        {/* Botón para crear turno */}
         <button type="submit" style={{ marginTop: '1rem' }}>
           Crear Turno
         </button>
       </form>
 
+      {/* Muestro mensaje de éxito */}
       {mensaje && <p style={{ color: 'green' }}>{mensaje}</p>}
+      {/* Muestro mensaje de error */}
       {error   && <p style={{ color: 'red' }}>{error}</p>}
     </div>
   );

@@ -1,19 +1,21 @@
-import client from './client';
+import client from './client'; // Importo el cliente axios
 
+// Obtengo todas las disponibilidades
 export function getDisponibilidades() {
   return client.get('/disponibilidades');
 }
 
+// Creo una o varias disponibilidades según el body
 export function crearDisponibilidad(body) {
-  // body puede ser un objeto { usuario_id, dia_semana, hora_inicio, hora_fin }
-  // o un array de ellos, según tu controlador
   return client.post('/disponibilidades', body);
 }
 
+// Elimino una disponibilidad por su ID
 export function eliminarDisponibilidad(id) {
   return client.delete(`/disponibilidades/${id}`);
 }
 
+// Elimino todas las disponibilidades
 export function eliminarTodasDisponibilidades() {
   return client.delete('/disponibilidades');
 }
