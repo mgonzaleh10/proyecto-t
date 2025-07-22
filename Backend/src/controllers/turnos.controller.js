@@ -6,35 +6,29 @@ const {
   updateTurno: updateTurnoModel,
   eliminarTurno: eliminarTurnoModel,
   eliminarTodosTurnos
-} = require('../models/turno.model'); // Importo funciones del modelo de turnos
-
-const { generarTurnosAutomaticamente } = require('../services/generadorHorarios'); // Importo servicio de generación automática
-const { sugerirIntercambio } = require('../services/recomendacionesHorarios');   // Importo servicio de recomendaciones
-const { sendMail } = require('../services/emailService');                         // Importo servicio de correo
-const pool = require('../config/db');                                             // Importo pool para validar disponibilidades
+} = require('../models/turno.model');                      // Importo funciones del modelo de turnos
+const { generarTurnosAutomaticamente } = require('../services/generadorHorarios'); // Servicio de generación automática
+const { sugerirIntercambio }       = require('../services/recomendacionesHorarios'); // Servicio de recomendaciones
+const { sendMail }                 = require('../services/emailService');            // Servicio de correo
+const pool                         = require('../config/db');                        // Pool para queries directas
 
 // POST /turnos
 const registrarTurno = async (req, res) => {
   try {
-    // Acepto uno o varios turnos en el body
     const turnos = Array.isArray(req.body) ? req.body : [req.body];
     const resultados = [];
 
     for (const t of turnos) {
-      // Desestructuro datos del turno
       const { usuario_id, fecha, hora_inicio, hora_fin, creado_por } = t;
-      // Ignoro si faltan campos
       if (!usuario_id || !fecha || !hora_inicio || !hora_fin || !creado_por) continue;
 
-      // ---- NUEVO: Parseo fecha en local para evitar desfase UTC ----
+      // Parseo fecha local y obtengo día de la semana en minúsculas
       const [y, m, d] = fecha.split('-').map(Number);
-      const localDate = new Date(y, m - 1, d);
-      const diaNombre = localDate
+      const diaNombre = new Date(y, m - 1, d)
         .toLocaleDateString('es-CL', { weekday: 'long' })
         .toLowerCase();
-      // --------------------------------------------------------------
 
-      // Consulto la disponibilidad registrada
+      // Valido disponibilidad
       const dispRes = await pool.query(
         `SELECT hora_inicio, hora_fin
          FROM disponibilidades
@@ -42,7 +36,6 @@ const registrarTurno = async (req, res) => {
         [usuario_id, diaNombre]
       );
 
-      // Si no existe o está fuera de rango, rechazo con mensaje claro
       if (
         dispRes.rows.length === 0 ||
         hora_inicio < dispRes.rows[0].hora_inicio ||
@@ -53,17 +46,15 @@ const registrarTurno = async (req, res) => {
         });
       }
 
-      // Si pasa la validación, creo el turno
+      // Creo el turno
       const nuevo = await crearTurno(t);
       resultados.push(nuevo);
     }
 
-    // Si no se creó ninguno, retorno error
     if (resultados.length === 0) {
       return res.status(400).json({ error: 'No se pudo registrar ningún turno válido.' });
     }
 
-    // Devuelvo los turnos creados
     res.status(201).json(resultados);
   } catch (error) {
     console.error('❌ Error al registrar turnos:', error);
@@ -71,6 +62,7 @@ const registrarTurno = async (req, res) => {
   }
 };
 
+// GET /turnos
 const listarTurnos = async (req, res) => {
   try {
     const t = await obtenerTurnos();
@@ -81,6 +73,7 @@ const listarTurnos = async (req, res) => {
   }
 };
 
+// GET /turnos/:id
 const turnosPorUsuario = async (req, res) => {
   try {
     const { id } = req.params;
@@ -92,6 +85,7 @@ const turnosPorUsuario = async (req, res) => {
   }
 };
 
+// GET /turnos/fecha/:fecha
 const turnosPorFecha = async (req, res) => {
   try {
     const { fecha } = req.params;
@@ -103,6 +97,7 @@ const turnosPorFecha = async (req, res) => {
   }
 };
 
+// POST /turnos/generar
 const generarHorario = async (req, res) => {
   try {
     const { fechaInicio } = req.body;
@@ -114,6 +109,7 @@ const generarHorario = async (req, res) => {
   }
 };
 
+// POST /turnos/intercambio
 const recomendarIntercambio = async (req, res) => {
   const { usuario_id, fecha, hora_inicio, hora_fin } = req.body;
   if (!usuario_id || !fecha || !hora_inicio || !hora_fin) {
@@ -129,6 +125,7 @@ const recomendarIntercambio = async (req, res) => {
   }
 };
 
+// PUT /turnos/:id
 const actualizarTurno = async (req, res) => {
   try {
     const { id } = req.params;
@@ -140,6 +137,7 @@ const actualizarTurno = async (req, res) => {
   }
 };
 
+// DELETE /turnos/:id
 const eliminarTurno = async (req, res) => {
   try {
     const { id } = req.params;
@@ -151,6 +149,7 @@ const eliminarTurno = async (req, res) => {
   }
 };
 
+// DELETE /turnos
 const eliminarTodos = async (req, res) => {
   try {
     await eliminarTodosTurnos();
@@ -161,13 +160,42 @@ const eliminarTodos = async (req, res) => {
   }
 };
 
+// POST /turnos/enviar-correo
 const enviarCalendario = async (req, res) => {
   try {
     const { destinatarios, asunto, html } = req.body;
     if (!Array.isArray(destinatarios) || !asunto || !html) {
       return res.status(400).json({ error: 'Faltan destinatarios, asunto o html' });
     }
-    await sendMail({ to: destinatarios, subject: asunto, html });
+
+    // Busco data‑URI de la imagen en el HTML
+    const match = html.match(/src="(data:image\/[^;]+;base64,[^"]+)"/);
+    let finalHtml = html;
+    const attachments = [];
+
+    if (match) {
+      const dataUri = match[1];
+      const [meta, b64] = dataUri.split(',');
+      const ext = (meta.match(/image\/(.+);base64/) || [])[1] || 'png';
+
+      // Reemplazo data‑URI por CID
+      finalHtml = html.replace(dataUri, 'cid:planilla@turnos');
+
+      attachments.push({
+        filename: `planilla.${ext}`,
+        content: Buffer.from(b64, 'base64'),
+        cid: 'planilla@turnos'
+      });
+    }
+
+    // Envío el correo con attachments si existen
+    await sendMail({
+      to: destinatarios,
+      subject: asunto,
+      html: finalHtml,
+      attachments
+    });
+
     res.json({ mensaje: 'Correo enviado correctamente' });
   } catch (error) {
     console.error('❌ Error al enviar correo:', error);
