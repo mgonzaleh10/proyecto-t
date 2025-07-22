@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'; // Importo React y hooks
+import { Link } from 'react-router-dom'; // Importo Link para navegación
 import {
   crearTurno,
   updateTurno,
@@ -158,7 +159,7 @@ export default function PlanillaTurnosManual() {
         [dayIdx]: {
           ...prev[crewId]?.[dayIdx],
           [field]: val,
-          free: false // Quito estado libre
+          free: false
         }
       }
     }));
@@ -171,7 +172,7 @@ export default function PlanillaTurnosManual() {
     Object.values(row).forEach(c => {
       if (c && !c.free && c.inicio && c.fin) {
         const mins = parseTime(c.fin) - parseTime(c.inicio);
-        total += Math.max(0, mins/60 - 1); // Resto 1h colación
+        total += Math.max(0, mins/60 - 1);
       }
     });
     return +total.toFixed(1);
@@ -227,6 +228,11 @@ export default function PlanillaTurnosManual() {
       <h2>Calendario Manual de Turnos</h2>
 
       <div className="planilla-controls">
+        {/* Botón para ir a la gestión de Crews */}
+        <Link to="/usuarios">
+          <button style={{ marginRight: '1rem' }}>Ir a Crews</button>
+        </Link>
+
         {/* Selector de semana */}
         <label>
           Semana:
