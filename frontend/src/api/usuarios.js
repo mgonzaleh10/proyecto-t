@@ -14,3 +14,8 @@ export function crearUsuario(body) {
 export function eliminarUsuario(id) {
   return client.delete(`/usuarios/${id}`);
 }
+
+// Nuevo: actualizar usuario existente
+export function updateUsuario(id, body) {
+  return client.put(`/usuarios/${id}`, body);
+}

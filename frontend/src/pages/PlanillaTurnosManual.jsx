@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react'; // Importo React y hooks
+import { Link } from 'react-router-dom'; // Importo Link para navegación
+import html2canvas from 'html2canvas';   // Importo html2canvas para capturar tabla
 import {
   crearTurno,
   updateTurno,
   eliminarTurno,
-  getTurnosPorFecha
-} from '../api/turnos'; // Importo API de turnos
+  getTurnosPorFecha,
+  enviarCalendario          // Importo la API para envío de correo
+} from '../api/turnos';       // Importo API de turnos (incluye enviarCalendario)
 import { getUsuarios } from '../api/usuarios'; // Importo API de usuarios
 import { getDisponibilidades } from '../api/disponibilidades'; // Importo API de disponibilidades
 
@@ -40,17 +43,12 @@ function getWeekDates(base) {
 }
 
 export default function PlanillaTurnosManual() {
-  // Estado para la fecha base (YYYY-MM-DD)
+  // Estados
   const [baseDate,  setBaseDate]  = useState(new Date().toISOString().slice(0,10));
-  // Fechas de la semana correspondiente
   const [weekDates, setWeekDates] = useState(getWeekDates(baseDate));
-  // Lista de crews
   const [crews,     setCrews]     = useState([]);
-  // Estado para celdas: { [crewId]: { [dayIdx]: { id?, inicio?, fin?, free? } } }
   const [cells,     setCells]     = useState({});
-  // Modo edición activado/desactivado
   const [editing,   setEditing]   = useState(false);
-  // Disponibilidades por usuario y día
   const [disps,     setDisps]     = useState({});
 
   // 1) Cargo o recargo datos de turnos y estado 'free' al cambiar semana
@@ -89,7 +87,7 @@ export default function PlanillaTurnosManual() {
         }
       });
     });
-    setCells(m); // Actualizo estado de celdas
+    setCells(m);
   }, [weekDates]);
 
   // 2) Cuando cambie baseDate, recalculo weekDates
@@ -144,7 +142,7 @@ export default function PlanillaTurnosManual() {
       if (next[crewId][dayIdx].free) setFechas.add(fecha);
       else setFechas.delete(fecha);
       store[crewId] = Array.from(setFechas);
-      localStorage.setItem(FREE_KEY, JSON.stringify(store)); // Guardo en LS
+      localStorage.setItem(FREE_KEY, JSON.stringify(store));
       return next;
     });
   };
@@ -158,7 +156,7 @@ export default function PlanillaTurnosManual() {
         [dayIdx]: {
           ...prev[crewId]?.[dayIdx],
           [field]: val,
-          free: false // Quito estado libre
+          free: false
         }
       }
     }));
@@ -171,7 +169,7 @@ export default function PlanillaTurnosManual() {
     Object.values(row).forEach(c => {
       if (c && !c.free && c.inicio && c.fin) {
         const mins = parseTime(c.fin) - parseTime(c.inicio);
-        total += Math.max(0, mins/60 - 1); // Resto 1h colación
+        total += Math.max(0, mins/60 - 1);
       }
     });
     return +total.toFixed(1);
@@ -201,8 +199,8 @@ export default function PlanillaTurnosManual() {
         }
       }
     }
-    setEditing(false); // Salgo de modo edición
-    await loadData();  // Recargo datos
+    setEditing(false);
+    await loadData();
   };
 
   // Genero resumen diario de cobertura y cierres
@@ -222,11 +220,50 @@ export default function PlanillaTurnosManual() {
     return { total, open, close };
   });
 
+  // Manejador de envío por correo
+  const handleSendEmail = async () => {
+    if (!window.confirm(
+      '¿Enviar la foto de esta planilla por correo a todos los crews listados?'
+    )) {
+      return;
+    }
+    try {
+      // 1) Capturo la tabla como imagen
+      const tableEl = document.querySelector('.planilla-table');
+      const canvas = await html2canvas(tableEl);
+      const imgData = canvas.toDataURL('image/png');
+
+      // 2) Preparo lista de destinatarios
+      const destinatarios = crews.map(u => u.correo);
+
+      // 3) Creo el HTML del correo
+      const htmlBody = `<h2>Planilla de Turnos - Semana del ${baseDate}</h2>
+        <img src="${imgData}" alt="Planilla de Turnos" style="max-width:100%;" />`;
+
+      // 4) Llamo a la API de backend
+      await enviarCalendario({
+        destinatarios,
+        asunto: `Planilla de Turnos - Semana del ${baseDate}`,
+        html: htmlBody
+      });
+
+      alert('Correos enviados correctamente.');
+    } catch (err) {
+      console.error('Error al enviar correos:', err);
+      alert(err.response?.data?.error || err.message || 'Falló el envío de correos.');
+    }
+  };
+
   return (
     <div className="planilla-container">
       <h2>Calendario Manual de Turnos</h2>
 
       <div className="planilla-controls">
+        {/* Botón para ir a la gestión de Crews */}
+        <Link to="/usuarios">
+          <button style={{ marginRight: '1rem' }}>Ir a Crews</button>
+        </Link>
+
         {/* Selector de semana */}
         <label>
           Semana:
@@ -242,12 +279,10 @@ export default function PlanillaTurnosManual() {
           {editing ? 'Cancelar' : 'Editar'}
         </button>
 
-        {/* Botón de enviar por correo (pendiente) */}
+        {/* Botón de enviar por correo */}
         <button
           className="btn-email"
-          onClick={() => {
-            /* TODO: implementar envío de correo */
-          }}
+          onClick={handleSendEmail}
         >
           Enviar por correo
         </button>
@@ -274,7 +309,6 @@ export default function PlanillaTurnosManual() {
         <tbody>
           {crews.map(c => (
             <tr key={c.id}>
-              {/* Nombre y horas contratadas */}
               <td className="first-col">
                 {c.nombre} ({horasTrabajadas(c.id)}/{c.horas_contrato})
               </td>
@@ -303,7 +337,6 @@ export default function PlanillaTurnosManual() {
                           </div>
                         ) : (
                           <>
-                            {/* Inputs de edición respetando disponibilidad */}
                             <input
                               type="time"
                               min={avail.inicio}
@@ -323,7 +356,6 @@ export default function PlanillaTurnosManual() {
                                 handleCellChange(c.id, i, 'fin', e.target.value)
                               }
                             />
-                            {/* Botón para marcar no disponible */}
                             <button
                               className="btn-block"
                               onClick={() => toggleLibre(c.id, i)}

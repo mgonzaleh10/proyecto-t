@@ -13,18 +13,19 @@ const transporter = nodemailer.createTransport({
 });
 
 /**
- * Envío un email con contenido HTML.
- * @param {string[]} to       Lista de destinatarios
- * @param {string} subject    Asunto del correo
- * @param {string} html       Contenido HTML del correo
+ * Envío un email con contenido HTML y opcionalmente attachments.
+ * @param {string[]} to           Lista de destinatarios
+ * @param {string} subject        Asunto del correo
+ * @param {string} html           Contenido HTML del correo
+ * @param {Array<Object>} [attachments]  Adjuntos para email (con cid si aplica)
  */
-async function sendMail({ to, subject, html }) {
-  // Utilizo el transportador para mandar el correo
+async function sendMail({ to, subject, html, attachments = [] }) {
   await transporter.sendMail({
-    from: process.env.SMTP_USER,                          // Remitente
-    to: to.join(','),                                      // Uno los destinatarios en una cadena
-    subject,                                               // Asigno el asunto
-    html                                                   // Asigno el contenido HTML
+    from: process.env.SMTP_USER,      // Remitente
+    to: to.join(','),                 // Uno los destinatarios en una cadena
+    subject,                          // Asigno el asunto
+    html,                             // Asigno el contenido HTML
+    attachments                       // Agrego attachments (p.ej. imagen embebida)
   });
 }
 

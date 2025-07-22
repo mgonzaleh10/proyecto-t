@@ -1,7 +1,8 @@
 const {
   crearNuevoUsuario,
   obtenerUsuarios,
-  eliminarUsuarioPorId
+  eliminarUsuarioPorId,
+  actualizarUsuario   // importo el nuevo método
 } = require('../models/usuario.model'); // Importo funciones del modelo de usuarios
 
 const crearUsuario = async (req, res) => {
@@ -92,8 +93,66 @@ const eliminarUsuario = async (req, res) => {
   }
 };
 
+// Nuevo: PUT /usuarios/:id
+const editarUsuario = async (req, res) => {
+  const { id } = req.params;
+  let {
+    nombre,
+    correo,
+    contrasena,
+    rol,
+    horas_contrato,
+    puede_cerrar
+  } = req.body;
+
+  // Validar campos obligatorios mínimos (nombre y correo)
+  if (!nombre || !correo) {
+    return res.status(400).json({ error: 'Nombre y correo son obligatorios.' });
+  }
+
+  // Contraseña por defecto si no se envía
+  if (!contrasena) contrasena = 'pass123';
+  // Rol por defecto
+  if (!rol) rol = 'crew';
+
+  // Validar horas_contrato
+  const permitted = [45, 30, 20, 16];
+  horas_contrato = Number(horas_contrato);
+  if (!permitted.includes(horas_contrato)) {
+    return res
+      .status(400)
+      .json({ error: 'Horas de contrato debe ser 45, 30, 20 o 16' });
+  }
+
+  // Parsear puede_cerrar
+  if (typeof puede_cerrar === 'string') {
+    puede_cerrar = /^si$/i.test(puede_cerrar) || /^true$/i.test(puede_cerrar);
+  } else {
+    puede_cerrar = Boolean(puede_cerrar);
+  }
+
+  try {
+    const usuario = await actualizarUsuario(id, {
+      nombre,
+      correo,
+      contrasena,
+      rol,
+      horas_contrato,
+      puede_cerrar
+    });
+    if (!usuario) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+    res.json(usuario);
+  } catch (error) {
+    console.error('❌ Error al editar usuario:', error);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+};
+
 module.exports = {
   crearUsuario,
   listarUsuarios,
-  eliminarUsuario
+  eliminarUsuario,
+  editarUsuario   // exporto el nuevo controlador
 }; // Exporto los controladores de usuarios
