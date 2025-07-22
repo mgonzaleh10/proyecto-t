@@ -178,31 +178,60 @@ export default function PlanillaTurnosManual() {
 
   // Guardo todos los cambios en BD y recargo datos
   const saveAll = async () => {
+    // 1) VALIDACIÓN LOCAL: ningún turno fuera de rango
     for (const crew of crews) {
-      const row = cells[crew.id] || {};
+      const row = cells[crew.id] || {}
       for (let i = 0; i < 7; i++) {
-        const c = row[i];
-        if (!c) continue;
+        const c = row[i]
+        if (c && !c.free && c.inicio && c.fin) {
+          const dayName = DAY_LABELS[i].toLowerCase()
+          const avail = disps[crew.id]?.[dayName]
+          if (
+            !avail ||
+            c.inicio < avail.inicio ||
+            c.fin > avail.fin
+          ) {
+            alert(
+              `No puede guardar: ${crew.nombre} el ` +
+              `${DAY_LABELS[i]} de ${c.inicio} a ${c.fin} ` +
+              `(su disponibilidad es ${avail?.inicio || '--'}–${avail?.fin || '--'})`
+            )
+            return // abortamos TODO, sin tocar el servidor
+          }
+        }
+      }
+    }
+
+    // 2) Si pasaron todas las validaciones, ahí sí vamos al servidor
+    for (const crew of crews) {
+      const row = cells[crew.id] || {}
+      for (let i = 0; i < 7; i++) {
+        const c = row[i]
+        if (!c) continue
+
         const payload = {
           fecha:       weekDates[i].toISOString().slice(0,10),
           hora_inicio: c.inicio,
           hora_fin:    c.fin,
           creado_por:  19,
           observaciones:''
-        };
-        if (c.free) {
-          if (c.id) await eliminarTurno(c.id);
-          continue;
         }
+
+        if (c.free) {
+          if (c.id) await eliminarTurno(c.id)
+          continue
+        }
+
         if (c.inicio && c.fin) {
-          if (c.id) await updateTurno(c.id, payload);
-          else    await crearTurno({ ...payload, usuario_id: crew.id });
+          if (c.id) await updateTurno(c.id, payload)
+          else    await crearTurno({ ...payload, usuario_id: crew.id })
         }
       }
     }
-    setEditing(false);
-    await loadData();
-  };
+
+    setEditing(false)
+    await loadData()
+  }
 
   // Genero resumen diario de cobertura y cierres
   const summary = weekDates.map((_, i) => {
@@ -299,9 +328,13 @@ export default function PlanillaTurnosManual() {
           </label>
 
           {/* Botón de editar/cancelar */}
-          <button className="btn-edit" onClick={() => setEditing(!editing)}>
-            {editing ? 'Cancelar' : 'Editar'}
-          </button>
+          <button className="btn-edit" onClick={() => { if (editing) {
+       // Cancelo: vuelvo a la última versión en BD/localStorage
+          loadData();
+          setEditing(false); } else {
+       // Entro en modo edición
+          setEditing(true); }}}>
+            {editing ? 'Cancelar' : 'Editar'} </button>
 
           {/* Botón de guardar (solo aparece en edición) */}
           {editing && (
