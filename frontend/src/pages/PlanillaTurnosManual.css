@@ -1,87 +1,110 @@
+/* Contenedor principal de la planilla */
 .planilla-container {
-  padding: 1rem;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  font-family: 'Arial', sans-serif;
-  color: #3D2314;
+  padding: 1rem; /* Aplico espacio interno */
+  background: #fff; /* Fondo blanco para contraste */
+  border-radius: 8px; /* Bordes redondeados */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15); /* Sombra suave */
+  font-family: 'Arial', sans-serif; /* Fuente legible */
+  color: #3D2314; /* Color de texto principal */
 }
 
+/* Barra de controles (fecha, botones) */
 .planilla-controls {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  display: flex; /* Alineo controles en fila */
+  align-items: center; /* Centrado vertical */
+  gap: 1rem; /* Separación entre elementos */
+  margin-bottom: 1rem; /* Espacio debajo */
 }
+
+/* Input de fecha dentro de controles */
 .planilla-controls input[type="date"] {
-  padding: 4px 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 4px 8px; /* Espacio interno */
+  border: 1px solid #ccc; /* Borde gris claro */
+  border-radius: 4px; /* Bordes suaves */
 }
+
+/* Estilo general de botones en controles */
 .planilla-controls button {
   padding: 6px 12px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
-  transition: opacity .2s;
-}
-.planilla-controls .btn-edit {
-  background: #FFC72C;
-  color: #3D2314;
-}
-.planilla-controls .btn-save {
-  background: #E31837;
-  color: #fff;
+  transition: opacity .2s; /* Efecto hover suave */
 }
 
+/* Botón de editar */
+.planilla-controls .btn-edit {
+  background: #FFC72C; /* Amarillo BK */
+  color: #3D2314;      /* Marrón oscuro */
+}
+
+/* Botón de guardar cambios */
+.planilla-controls .btn-save {
+  background: #E31837; /* Rojo BK */
+  color: #fff;         /* Texto blanco */
+}
+
+/* Tabla de turnos */
 .planilla-table {
-  width: 100%;
-  border-collapse: collapse;
+  width: 100%; /* Ocupo todo el ancho */
+  border-collapse: collapse; /* Sin espacios entre celdas */
   margin-top: 1rem;
 }
+
+/* Celdas y encabezados de tabla */
 .planilla-table th,
 .planilla-table td {
-  border: 1px solid #3D2314;
+  border: 1px solid #3D2314; /* Borde marrón */
   padding: 8px;
   text-align: center;
 }
+
+/* Encabezados */
 .planilla-table th {
-  background: #8a4221;
-  color: #fff;
+  background: #8a4221; /* Marrón oscuro */
+  color: #fff;         /* Blanco para contraste */
   font-size: 0.9rem;
 }
+
+/* Primera columna (nombres de crew) */
 .planilla-table td.first-col {
-  background: #fff3c7;
+  background: #fff3c7; /* Amarillo claro */
   color: #3D2314;
   font-weight: bold;
   text-align: left;
 }
 
-/* turno asignado */
+/* Celda con turno asignado */
 .planilla-table td.assigned-cell {
-  background-color: #FFE0B2;
+  background-color: #FFE0B2; /* Sutil naranja */
 }
 
-/* libre */
+/* Celda libre */
 .planilla-table td.free-cell {
-  background-color: #005c05;
-  color: #fff;
+  background-color: #005c05; /* Verde oscuro */
+  color: #fff; /* Texto blanco */
 }
 
+/* Texto de no disponibilidad */
 .not-available {
-  color: #B71C1C;
+  color: #B71C1C; /* Rojo intenso */
   font-weight: bold;
 }
+
+/* Etiqueta 'Libre' en vista no edición */
 .free-label {
-  color: #fff;      /* texto blanco para libre */
+  color: #fff;      /* Blanco sobre verde */
   font-weight: bold;
 }
+
+/* Rango de disponibilidad cuando no está asignado */
 .disp-range {
-  color: #3D2314;
+  color: #3D2314;  /* Marrón */
   font-style: italic;
 }
 
+/* Botones dentro de celdas */
 .planilla-table td button {
   margin-left: 4px;
   padding: 2px 6px;
@@ -91,23 +114,31 @@
   font-size: 0.8rem;
   cursor: pointer;
 }
+
+/* Botón para marcar celda libre */
 .planilla-table td .btn-free {
-  background: #388E3C;
-}
-.planilla-table td .btn-block {
-  background: #A00;
+  background: #388E3C; /* Verde medio */
 }
 
+/* Botón para bloquear turno */
+.planilla-table td .btn-block {
+  background: #A00; /* Rojo oscuro */
+}
+
+/* Contenedor para edición de celda libre */
 .free-cell-edit {
   display: flex;
   justify-content: center;
 }
+
+/* Centrado interno del botón libre */
 .free-cell-edit .edit-center {
   margin: 0;
 }
 
+/* Botón de envío de correo */
 .planilla-controls .btn-email {
-  background: #0066cc; /* color a tu gusto */
+  background: #0066cc; /* Azul BK */
   color: #fff;
   margin-left: 0.5rem;
 }

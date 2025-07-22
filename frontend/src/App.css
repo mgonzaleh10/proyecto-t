@@ -1,18 +1,22 @@
+/* Defino alineación central del texto en el contenedor principal */
 .App {
   text-align: center;
 }
 
+/* Ajusto el tamaño del logo y deshabilito interacciones */
 .App-logo {
   height: 40vmin;
   pointer-events: none;
 }
 
+/* Aplico animación de giro al logo si el usuario no ha solicitado animaciones reducidas */
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {
     animation: App-logo-spin infinite 20s linear;
   }
 }
 
+/* Establezco estilos del encabezado: fondo oscuro, centrado y fuente adaptable */
 .App-header {
   background-color: #282c34;
   min-height: 100vh;
@@ -24,10 +28,12 @@
   color: white;
 }
 
+/* Defino color para enlaces dentro de la aplicación */
 .App-link {
   color: #61dafb;
 }
 
+/* Creo la animación de giro para el logo */
 @keyframes App-logo-spin {
   from {
     transform: rotate(0deg);
