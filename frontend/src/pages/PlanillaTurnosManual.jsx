@@ -6,8 +6,9 @@ import {
   updateTurno,
   eliminarTurno,
   getTurnosPorFecha,
-  enviarCalendario          // Importo la API para envío de correo
-} from '../api/turnos';       // Importo API de turnos (incluye enviarCalendario)
+  eliminarTodosTurnos,  // Importo para borrar todos los turnos
+  enviarCalendario      // Importo la API para envío de correo
+} from '../api/turnos';   // Importo API de turnos
 import { getUsuarios } from '../api/usuarios'; // Importo API de usuarios
 import { getDisponibilidades } from '../api/disponibilidades'; // Importo API de disponibilidades
 
@@ -177,31 +178,60 @@ export default function PlanillaTurnosManual() {
 
   // Guardo todos los cambios en BD y recargo datos
   const saveAll = async () => {
+    // 1) VALIDACIÓN LOCAL: ningún turno fuera de rango
     for (const crew of crews) {
-      const row = cells[crew.id] || {};
+      const row = cells[crew.id] || {}
       for (let i = 0; i < 7; i++) {
-        const c = row[i];
-        if (!c) continue;
+        const c = row[i]
+        if (c && !c.free && c.inicio && c.fin) {
+          const dayName = DAY_LABELS[i].toLowerCase()
+          const avail = disps[crew.id]?.[dayName]
+          if (
+            !avail ||
+            c.inicio < avail.inicio ||
+            c.fin > avail.fin
+          ) {
+            alert(
+              `No puede guardar: ${crew.nombre} el ` +
+              `${DAY_LABELS[i]} de ${c.inicio} a ${c.fin} ` +
+              `(su disponibilidad es ${avail?.inicio || '--'}–${avail?.fin || '--'})`
+            )
+            return // abortamos TODO, sin tocar el servidor
+          }
+        }
+      }
+    }
+
+    // 2) Si pasaron todas las validaciones, ahí sí vamos al servidor
+    for (const crew of crews) {
+      const row = cells[crew.id] || {}
+      for (let i = 0; i < 7; i++) {
+        const c = row[i]
+        if (!c) continue
+
         const payload = {
           fecha:       weekDates[i].toISOString().slice(0,10),
           hora_inicio: c.inicio,
           hora_fin:    c.fin,
           creado_por:  19,
           observaciones:''
-        };
-        if (c.free) {
-          if (c.id) await eliminarTurno(c.id);
-          continue;
         }
+
+        if (c.free) {
+          if (c.id) await eliminarTurno(c.id)
+          continue
+        }
+
         if (c.inicio && c.fin) {
-          if (c.id) await updateTurno(c.id, payload);
-          else    await crearTurno({ ...payload, usuario_id: crew.id });
+          if (c.id) await updateTurno(c.id, payload)
+          else    await crearTurno({ ...payload, usuario_id: crew.id })
         }
       }
     }
-    setEditing(false);
-    await loadData();
-  };
+
+    setEditing(false)
+    await loadData()
+  }
 
   // Genero resumen diario de cobertura y cierres
   const summary = weekDates.map((_, i) => {
@@ -228,19 +258,15 @@ export default function PlanillaTurnosManual() {
       return;
     }
     try {
-      // 1) Capturo la tabla como imagen
       const tableEl = document.querySelector('.planilla-table');
       const canvas = await html2canvas(tableEl);
       const imgData = canvas.toDataURL('image/png');
 
-      // 2) Preparo lista de destinatarios
       const destinatarios = crews.map(u => u.correo);
 
-      // 3) Creo el HTML del correo
       const htmlBody = `<h2>Planilla de Turnos - Semana del ${baseDate}</h2>
         <img src="${imgData}" alt="Planilla de Turnos" style="max-width:100%;" />`;
 
-      // 4) Llamo a la API de backend
       await enviarCalendario({
         destinatarios,
         asunto: `Planilla de Turnos - Semana del ${baseDate}`,
@@ -254,45 +280,84 @@ export default function PlanillaTurnosManual() {
     }
   };
 
+  // Manejador de limpiar toda la tabla
+  const handleClearTable = async () => {
+    if (!window.confirm(
+      '¿Seguro quieres borrar todos los turnos y los días libres asignados? Se reseteará la vista a solo disponibilidades.'
+    )) {
+      return;
+    }
+    try {
+      // 1) Borro turnos en servidor
+      await eliminarTodosTurnos();
+      // 2) Borro estado free de localStorage
+      localStorage.removeItem(FREE_KEY);
+      // 3) Recargo datos
+      setEditing(false);
+      await loadData();
+      alert('Tabla limpiada correctamente.');
+    } catch (err) {
+      console.error('Error al limpiar tabla:', err);
+      alert('Falló al limpiar la tabla.');
+    }
+  };
+
   return (
     <div className="planilla-container">
       <h2>Calendario Manual de Turnos</h2>
 
-      <div className="planilla-controls">
-        {/* Botón para ir a la gestión de Crews */}
-        <Link to="/usuarios">
-          <button style={{ marginRight: '1rem' }}>Ir a Crews</button>
-        </Link>
+      <div
+        className="planilla-controls"
+        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+      >
+        <div>
+          {/* Botón para ir a la gestión de Crews */}
+          <Link to="/usuarios">
+            <button style={{ marginRight: '1rem' }}>Ir a Crews</button>
+          </Link>
 
-        {/* Selector de semana */}
-        <label>
-          Semana:
-          <input
-            type="date"
-            value={baseDate}
-            onChange={e => setBaseDate(e.target.value)}
-          />
-        </label>
+          {/* Selector de semana */}
+          <label>
+            Semana:
+            <input
+              type="date"
+              value={baseDate}
+              onChange={e => setBaseDate(e.target.value)}
+              style={{ margin: '0 1rem' }}
+            />
+          </label>
 
-        {/* Botón de editar/cancelar */}
-        <button className="btn-edit" onClick={() => setEditing(!editing)}>
-          {editing ? 'Cancelar' : 'Editar'}
-        </button>
+          {/* Botón de editar/cancelar */}
+          <button className="btn-edit" onClick={() => { if (editing) {
+       // Cancelo: vuelvo a la última versión en BD/localStorage
+          loadData();
+          setEditing(false); } else {
+       // Entro en modo edición
+          setEditing(true); }}}>
+            {editing ? 'Cancelar' : 'Editar'} </button>
 
-        {/* Botón de enviar por correo */}
-        <button
-          className="btn-email"
-          onClick={handleSendEmail}
-        >
-          Enviar por correo
-        </button>
+          {/* Botón de guardar (solo aparece en edición) */}
+          {editing && (
+            <button className="btn-save" onClick={saveAll} style={{ marginLeft: '1rem' }}>
+              Guardar Cambios
+            </button>
+          )}
+        </div>
 
-        {/* Botón de guardar (solo aparece en edición) */}
-        {editing && (
-          <button className="btn-save" onClick={saveAll}>
-            Guardar Cambios
+        <div>
+          {/* Botón de limpiar toda la tabla */}
+          <button
+            style={{ marginRight: '1rem', background: '#c00', color: '#fff' }}
+            onClick={handleClearTable}
+          >
+            Limpiar tabla
           </button>
-        )}
+
+          {/* Botón de enviar por correo */}
+          <button className="btn-email" onClick={handleSendEmail}>
+            Enviar por correo
+          </button>
+        </div>
       </div>
 
       <table className="planilla-table">
