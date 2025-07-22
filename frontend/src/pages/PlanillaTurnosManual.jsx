@@ -44,7 +44,6 @@ export default function PlanillaTurnosManual() {
 
   // 1) Carga/recarga de datos
   const loadData = useCallback(async () => {
-    // 1a) Traer turnos de la semana
     const all = []
     for (const d of weekDates) {
       const fecha = d.toISOString().slice(0,10)
@@ -53,7 +52,6 @@ export default function PlanillaTurnosManual() {
         all.push(...r.data)
       } catch {}
     }
-    // 1b) Mapear a celdas
     const m = {}
     all.forEach(t => {
       const idx = weekDates.findIndex(d => d.toISOString().slice(0,10) === t.fecha.slice(0,10))
@@ -67,7 +65,6 @@ export default function PlanillaTurnosManual() {
         }
       }
     })
-    // 1c) Reaplicar “Libre”
     const store = JSON.parse(localStorage.getItem(FREE_KEY) || '{}')
     Object.entries(store).forEach(([uid, fechas]) => {
       const crewId = Number(uid)
@@ -225,9 +222,23 @@ export default function PlanillaTurnosManual() {
             onChange={e => setBaseDate(e.target.value)}
           />
         </label>
+
+        {/* Botón de Editar/Cancelar */}
         <button className="btn-edit" onClick={() => setEditing(!editing)}>
           {editing ? 'Cancelar' : 'Editar'}
         </button>
+
+        {/* Botón de Enviar por correo (sin funcionalidad aún) */}
+        <button
+          className="btn-email"
+          onClick={() => {
+            /* TODO: implementar envío de correo */
+          }}
+        >
+          Enviar por correo
+        </button>
+
+        {/* Botón de Guardar (sólo en edición) */}
         {editing && (
           <button className="btn-save" onClick={saveAll}>
             Guardar Cambios
@@ -261,6 +272,7 @@ export default function PlanillaTurnosManual() {
                 let className = ''
                 if (isAssigned) className = 'assigned-cell'
                 else if (isFree) className = 'free-cell'
+
                 return (
                   <td key={i} className={className}>
                     {editing ? (

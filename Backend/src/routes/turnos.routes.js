@@ -9,7 +9,8 @@ const {
   recomendarIntercambio,
   actualizarTurno,
   eliminarTurno,
-  eliminarTodos
+  eliminarTodos,
+  enviarCalendario
 } = require('../controllers/turnos.controller');
 
 // CRUD
@@ -28,5 +29,8 @@ router.post('/intercambio', recomendarIntercambio);
 // Borrado
 router.delete('/:id', eliminarTurno);
 router.delete('/', eliminarTodos);
+
+// Envío de calendario por correo
+router.post('/enviar-correo', enviarCalendario);
 
 module.exports = router;

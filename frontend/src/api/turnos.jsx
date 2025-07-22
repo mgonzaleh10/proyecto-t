@@ -32,7 +32,11 @@ export function eliminarTodosTurnos() {
   return client.delete('/turnos');
 }
 
-// Aquí la agregas junto a las demás:
 export function updateTurno(id, body) {
   return client.put(`/turnos/${id}`, body);
+}
+
+// ← Nueva función para disparar el envío de correos
+export function enviarCalendario(body) {
+  return client.post('/turnos/enviar-correo', body);
 }

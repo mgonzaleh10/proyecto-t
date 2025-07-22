@@ -9,6 +9,7 @@ const {
 } = require('../models/turno.model');
 const { generarTurnosAutomaticamente } = require('../services/generadorHorarios');
 const { sugerirIntercambio } = require('../services/recomendacionesHorarios');
+const { sendMail } = require('../services/emailService');
 
 const registrarTurno = async (req, res) => {
   try {
@@ -120,6 +121,20 @@ const eliminarTodos = async (req, res) => {
   }
 };
 
+const enviarCalendario = async (req, res) => {
+  try {
+    const { destinatarios, asunto, html } = req.body;
+    if (!Array.isArray(destinatarios) || !asunto || !html) {
+      return res.status(400).json({ error: 'Faltan destinatarios, asunto o html' });
+    }
+    await sendMail({ to: destinatarios, subject: asunto, html });
+    res.json({ mensaje: 'Correo enviado correctamente' });
+  } catch (error) {
+    console.error('❌ Error al enviar correo:', error);
+    res.status(500).json({ error: 'No se pudo enviar el correo' });
+  }
+};
+
 module.exports = {
   registrarTurno,
   listarTurnos,
@@ -129,5 +144,6 @@ module.exports = {
   recomendarIntercambio,
   actualizarTurno,
   eliminarTurno,
-  eliminarTodos
+  eliminarTodos,
+  enviarCalendario
 };

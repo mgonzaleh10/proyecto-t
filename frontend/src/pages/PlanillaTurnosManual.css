@@ -105,3 +105,9 @@
 .free-cell-edit .edit-center {
   margin: 0;
 }
+
+.planilla-controls .btn-email {
+  background: #0066cc; /* color a tu gusto */
+  color: #fff;
+  margin-left: 0.5rem;
+}
