@@ -1,32 +1,62 @@
-const { crearBeneficio } = require('../models/beneficio.model');  // Importo función para crear un beneficio en BD
+const { 
+  crearBeneficio, 
+  updateBeneficio, 
+  eliminarBeneficio: eliminarBeneficioModel 
+} = require('../models/beneficio.model');
+const pool = require('../config/db');
 
+// POST   /beneficios
 const registrarBeneficio = async (req, res) => {
-    try {
-        const { id_usuario, tipo, fecha, descripcion } = req.body;  // Desestructuro datos entrantes
-        console.log('🎁 Beneficio recibido:', req.body);           // Log para depuración
-
-        const beneficio = await crearBeneficio({ id_usuario, tipo, fecha, descripcion });  // Creo el registro
-
-        res.status(201).json(beneficio);  // Devuelvo el nuevo beneficio con código 201
-    } catch (error) {
-        console.error('❌ Error al registrar beneficio:', error);
-        res.status(500).json({ error: 'Error del servidor' });  // Manejo de error genérico
-    }
+  try {
+    const { id_usuario, tipo, fecha, descripcion } = req.body;
+    console.log('🎁 Beneficio recibido:', req.body);
+    const beneficio = await crearBeneficio({ usuario_id: id_usuario, tipo, fecha, descripcion });
+    res.status(201).json(beneficio);
+  } catch (error) {
+    console.error('❌ Error al registrar beneficio:', error);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
 };
 
-const pool = require('../config/db');  // Importo la conexión a la BD
+// GET    /beneficios
+const obtenerBeneficios = async (_req, res) => {
+  try {
+    const resultado = await pool.query('SELECT * FROM beneficios');
+    res.json(resultado.rows);
+  } catch (error) {
+    console.error('❌ Error al obtener beneficios:', error);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+};
 
-const obtenerBeneficios = async (req, res) => {
-    try {
-        const resultado = await pool.query('SELECT * FROM beneficios');  // Consulto todos los beneficios
-        res.json(resultado.rows);  // Devuelvo array de filas
-    } catch (error) {
-        console.error('❌ Error al obtener beneficios:', error);
-        res.status(500).json({ error: 'Error del servidor' });  // Error de servidor
-    }
+// PUT    /beneficios/beneficio/:id
+const actualizarBeneficio = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fecha, descripcion } = req.body;
+    const upd = await updateBeneficio(id, { fecha, descripcion });
+    res.json(upd);
+  } catch (error) {
+    console.error('❌ Error al actualizar beneficio:', error);
+    res.status(500).json({ error: 'Error al actualizar beneficio' });
+  }
+};
+
+// DELETE /beneficios/beneficio/:id
+const eliminarBeneficio = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await eliminarBeneficioModel(id);
+    res.json({ mensaje: 'Beneficio eliminado' });
+  } catch (error) {
+    console.error('❌ Error al eliminar beneficio:', error);
+    res.status(500).json({ error: 'Error al eliminar beneficio' });
+  }
 };
 
 module.exports = {
-    registrarBeneficio,  // Exporto controlador para POST
-    obtenerBeneficios    // Exporto controlador para GET
+  registrarBeneficio,
+  obtenerBeneficios,
+  actualizarBeneficio,
+  eliminarBeneficio
 };

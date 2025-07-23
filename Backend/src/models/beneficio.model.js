@@ -1,20 +1,57 @@
 const pool = require('../config/db');
 
-const crearBeneficio = async ({ id_usuario, tipo, fecha, descripcion }) => {
-    // Inserto un registro en la tabla beneficios
-    const query = `
-        INSERT INTO beneficios (usuario_id, tipo, fecha, descripcion)
-        VALUES ($1, $2, $3, $4)
-        RETURNING *;
-    `;
-    // Preparo los valores para la consulta
-    const valores = [id_usuario, tipo, fecha, descripcion];
-    // Ejecuto la consulta y recupero el beneficio creado
-    const resultado = await pool.query(query, valores);
-    // Devuelvo el primer registro insertado
-    return resultado.rows[0];
-};
+/**
+ * Crea un nuevo beneficio.
+ * @param {Object} params
+ * @param {number} params.id_usuario
+ * @param {string} params.tipo
+ * @param {string} params.fecha        // 'YYYY-MM-DD'
+ * @param {string} [params.descripcion]
+ */
+async function crearBeneficio({ id_usuario, tipo, fecha, descripcion }) {
+  const query = `
+    INSERT INTO beneficios (usuario_id, tipo, fecha, descripcion)
+    VALUES ($1, $2, $3, $4)
+    RETURNING *;
+  `;
+  const valores = [id_usuario, tipo, fecha, descripcion];
+  const { rows } = await pool.query(query, valores);
+  return rows[0];
+}
+
+/**
+ * Actualiza un beneficio existente.
+ * @param {number} id
+ * @param {Object} data
+ * @param {string} data.fecha
+ * @param {string} [data.descripcion]
+ */
+async function updateBeneficio(id, { fecha, descripcion }) {
+  const query = `
+    UPDATE beneficios
+       SET fecha       = $1,
+           descripcion = $2
+     WHERE id = $3
+    RETURNING *;
+  `;
+  const valores = [fecha, descripcion, id];
+  const { rows } = await pool.query(query, valores);
+  return rows[0];
+}
+
+/**
+ * Elimina un beneficio por su ID.
+ * @param {number} id
+ */
+async function eliminarBeneficio(id) {
+  await pool.query(
+    `DELETE FROM beneficios WHERE id = $1`,
+    [id]
+  );
+}
 
 module.exports = {
-    crearBeneficio
+  crearBeneficio,
+  updateBeneficio,
+  eliminarBeneficio
 };
