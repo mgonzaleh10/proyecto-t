@@ -8,6 +8,7 @@ import UsuariosPage from './pages/UsuariosPage'; // Importo la página de gesti�
 import PlanillaTurnos from './pages/PlanillaTurnos'; // Importo la página de planilla automática
 import PlanillaTurnosManual from './pages/PlanillaTurnosManual'; // Importo la página de planilla manual
 import DisponibilidadesPage from './pages/DisponibilidadesPage'; // Importo la página de disponibilidades
+import BeneficiosPage from './pages/BeneficiosPage';
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
         <Link to="/planilla" style={{ marginRight: '1rem' }}>Planilla</Link> {/* Enlace a Planilla */}
         <Link to="/planilla-manual" style={{ marginRight: '1rem' }}>Planilla Manual</Link> {/* Enlace a Planilla Manual */}
         <Link to="/disponibilidades">Disponibilidades</Link> {/* Enlace a Disponibilidades */}
+        <Link to="/beneficios">Beneficios</Link>
       </header>
 
       {/* Contenedor principal donde se renderizan las rutas */}
@@ -33,6 +35,7 @@ export default function App() {
           <Route path="/planilla" element={<PlanillaTurnos />} /> {/* Ruta para PlanillaTurnos */}
           <Route path="/planilla-manual" element={<PlanillaTurnosManual />} /> {/* Ruta para PlanillaTurnosManual */}
           <Route path="/disponibilidades" element={<DisponibilidadesPage />} /> {/* Ruta para DisponibilidadesPage */}
+          <Route path="/beneficios" element={<BeneficiosPage />} />
 
           {/* Ruta comodín para mostrar mensaje 404 */}
           <Route

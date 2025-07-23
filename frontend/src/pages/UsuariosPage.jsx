@@ -10,8 +10,7 @@ export default function UsuariosPage() {
     nombre: '',
     correo: '',
     horas_contrato: 45,
-    puede_cerrar: false,
-    cumpleaños: ''    // ← Incluimos cumpleaños en el formulario de edición
+    puede_cerrar: false
   });
 
   const fetchUsuarios = async () => {
@@ -48,8 +47,7 @@ export default function UsuariosPage() {
       nombre: u.nombre,
       correo: u.correo,
       horas_contrato: u.horas_contrato,
-      puede_cerrar: u.puede_cerrar,
-      cumpleaños: u.cumpleaños ? u.cumpleaños.slice(0,10) : ''  // ← prellenamos cumpleaños
+      puede_cerrar: u.puede_cerrar
     });
     setError(null);
   };
@@ -83,7 +81,11 @@ export default function UsuariosPage() {
       {/* Formulario de creación */}
       <NuevoUsuario onNueva={fetchUsuarios} />
 
-      <table border="1" cellPadding="8" style={{ borderCollapse: 'collapse', marginTop: '1rem', width: '100%' }}>
+      <table
+        border="1"
+        cellPadding="8"
+        style={{ borderCollapse: 'collapse', marginTop: '1rem', width: '100%' }}
+      >
         <thead>
           <tr>
             <th>ID</th>
@@ -91,7 +93,6 @@ export default function UsuariosPage() {
             <th>Correo</th>
             <th>Horas Contrato</th>
             <th>Puede cerrar</th>
-            <th>Cumpleaños</th> {/* ← Nueva columna */}
             <th>Acciones</th>
           </tr>
         </thead>
@@ -145,22 +146,6 @@ export default function UsuariosPage() {
                       onChange={handleEditChange}
                     />
                   : (u.puede_cerrar ? 'Sí' : 'No')
-                }
-              </td>
-
-              {/* Cumpleaños */}
-              <td>
-                {editId === u.id
-                  ? <input
-                      type="date"
-                      name="cumpleaños"
-                      value={editForm.cumpleaños}
-                      onChange={handleEditChange}
-                    />
-                  : (u.cumpleaños 
-                      ? new Date(u.cumpleaños).toLocaleDateString() 
-                      : '—'
-                    )
                 }
               </td>
 
