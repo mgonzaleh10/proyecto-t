@@ -3,18 +3,18 @@ const pool = require('../config/db');
 /**
  * Crea un nuevo beneficio.
  * @param {Object} params
- * @param {number} params.id_usuario
+ * @param {number} params.usuario_id
  * @param {string} params.tipo
  * @param {string} params.fecha        // 'YYYY-MM-DD'
  * @param {string} [params.descripcion]
  */
-async function crearBeneficio({ id_usuario, tipo, fecha, descripcion }) {
+async function crearBeneficio({ usuario_id, tipo, fecha, descripcion }) {
   const query = `
     INSERT INTO beneficios (usuario_id, tipo, fecha, descripcion)
     VALUES ($1, $2, $3, $4)
     RETURNING *;
   `;
-  const valores = [id_usuario, tipo, fecha, descripcion];
+  const valores = [usuario_id, tipo, fecha, descripcion];
   const { rows } = await pool.query(query, valores);
   return rows[0];
 }
