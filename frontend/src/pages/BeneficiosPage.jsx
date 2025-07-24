@@ -8,6 +8,8 @@ import {
   eliminarBeneficio
 } from '../api/beneficios';
 
+import './BeneficiosPage.css'; // Nuevo CSS
+
 export default function BeneficiosPage() {
   const [usuarios, setUsuarios] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -68,80 +70,83 @@ export default function BeneficiosPage() {
   };
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h2>Beneficios de los Crews</h2>
-      <Link to="/usuarios">
-        <button style={{ marginBottom: '1rem' }}>← Volver a Crews</button>
-      </Link>
+    <div className="beneficios-container">
+      <header className="beneficios-header">
+        <h2>Beneficios de los Crews</h2>
+        <Link to="/usuarios">
+          <button className="btn btn-secondary">← Volver a Crews</button>
+        </Link>
+      </header>
 
-      {/* Select Crew */}
-      <div style={{ marginBottom: '1rem' }}>
-        <label>
-          Selecciona Crew:
-          <select
-            value={selectedUser || ''}
-            onChange={e => setSelectedUser(e.target.value || null)}
-            style={{ marginLeft: '0.5rem' }}
-          >
-            <option value="">—</option>
-            {usuarios.map(u => (
-              <option key={u.id} value={u.id}>{u.nombre}</option>
-            ))}
-          </select>
-        </label>
+      <div className="form-group">
+        <label>Selecciona Crew:</label>
+        <select
+          value={selectedUser || ''}
+          onChange={e => setSelectedUser(e.target.value || null)}
+          className="select"
+        >
+          <option value="">—</option>
+          {usuarios.map(u => (
+            <option key={u.id} value={u.id}>{u.nombre}</option>
+          ))}
+        </select>
       </div>
 
       {selectedUser && (
         <>
-          {/* 1) Cumpleaños */}
-          <section style={{ marginBottom: '2rem' }}>
+          {/* Cumpleaños */}
+          <section className="section-card">
             <h3>Cumpleaños</h3>
             {byType('cumpleaños').map(b => (
-              <div key={b.id} style={{ marginBottom: '.5rem' }}>
-                {new Date(b.fecha).toLocaleDateString()} &nbsp;
-                <button onClick={() => {
-                  setEditId(b.id);
-                  setEditTipo('cumpleaños');
-                  setCumpleForm({ fecha: b.fecha.slice(0,10), descripcion: b.descripcion || '' });
-                }}>✏️</button>
-                <button onClick={() => handleDelete(b.id)} style={{ marginLeft: '.5rem' }}>🗑️</button>
+              <div key={b.id} className="item-row">
+                <span>{new Date(b.fecha).toLocaleDateString()}</span>
+                <div>
+                  <button
+                    className="btn-icon"
+                    onClick={() => {
+                      setEditId(b.id);
+                      setEditTipo('cumpleaños');
+                      setCumpleForm({ fecha: b.fecha.slice(0,10), descripcion: b.descripcion || '' });
+                    }}
+                  >✏️</button>
+                  <button
+                    className="btn-icon btn-danger"
+                    onClick={() => handleDelete(b.id)}
+                  >🗑️</button>
+                </div>
               </div>
             ))}
             {(byType('cumpleaños').length === 0 || editTipo === 'cumpleaños') && (
-              <form onSubmit={e => {
+              <form className="form-inline" onSubmit={e => {
                 e.preventDefault();
                 if (editId) return handleUpdate(editId, cumpleForm);
                 handleCrear({ tipo: 'cumpleaños', ...cumpleForm });
               }}>
-                <label>
-                  Fecha:
-                  <input
-                    type="date"
-                    required
-                    value={cumpleForm.fecha}
-                    onChange={e => setCumpleForm(f => ({ ...f, fecha: e.target.value }))}
-                    style={{ margin: '0 .5rem' }}
-                  />
-                </label>
-                <label>
-                  Descripción:
-                  <input
-                    type="text"
-                    placeholder="Opcional"
-                    value={cumpleForm.descripcion}
-                    onChange={e => setCumpleForm(f => ({ ...f, descripcion: e.target.value }))}
-                    style={{ margin: '0 .5rem' }}
-                  />
-                </label>
-                <button type="submit">
+                <input
+                  type="date"
+                  required
+                  value={cumpleForm.fecha}
+                  onChange={e => setCumpleForm(f => ({ ...f, fecha: e.target.value }))}
+                />
+                <input
+                  type="text"
+                  placeholder="Descripción opcional"
+                  value={cumpleForm.descripcion}
+                  onChange={e => setCumpleForm(f => ({ ...f, descripcion: e.target.value }))}
+                />
+                <button type="submit" className="btn btn-primary">
                   {editId ? 'Guardar Cambios' : 'Agregar Cumpleaños'}
                 </button>
                 {editId && (
-                  <button type="button" onClick={() => {
-                    setEditId(null);
-                    setEditTipo(null);
-                    setCumpleForm({ fecha:'', descripcion:'' });
-                  }} style={{ marginLeft: '.5rem' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setEditId(null);
+                      setEditTipo(null);
+                      setCumpleForm({ fecha:'', descripcion:'' });
+                    }}
+                  >
                     Cancelar
                   </button>
                 )}
@@ -149,39 +154,47 @@ export default function BeneficiosPage() {
             )}
           </section>
 
-          {/* 2) Días administrativos */}
-          <section style={{ marginBottom: '2rem' }}>
-            <h3>Días Administrativos (Usados: {usedAdminCount}/2)</h3>
+          {/* Días administrativos */}
+          <section className="section-card">
+            <h3>Días Administrativos ({usedAdminCount}/2)</h3>
             {[0,1].map(slot => {
               const b = byType('administrativo')[slot];
               return (
-                <div key={slot} style={{ marginBottom: '.5rem' }}>
-                  Slot {slot+1}:&nbsp;
+                <div key={slot} className="item-row">
+                  <span>Slot {slot+1}:</span>
                   {b
-                    ? (
-                      <>
-                        {new Date(b.fecha).toLocaleDateString()}
-                        <button onClick={() => {
-                          setEditId(b.id);
-                          setEditTipo('administrativo');
-                          setAdminForm({ visible: true, fecha: b.fecha.slice(0,10), descripcion: b.descripcion || '' });
-                        }} style={{ marginLeft: '.5rem' }}>✏️</button>
-                        <button onClick={() => handleDelete(b.id)} style={{ marginLeft: '.5rem' }}>🗑️</button>
+                    ? <>
+                        <span>{new Date(b.fecha).toLocaleDateString()}</span>
+                        <div>
+                          <button
+                            className="btn-icon"
+                            onClick={() => {
+                              setEditId(b.id);
+                              setEditTipo('administrativo');
+                              setAdminForm({ visible: true, fecha: b.fecha.slice(0,10), descripcion: b.descripcion || '' });
+                            }}
+                          >✏️</button>
+                          <button
+                            className="btn-icon btn-danger"
+                            onClick={() => handleDelete(b.id)}
+                          >🗑️</button>
+                        </div>
                       </>
-                    )
                     : (usedAdminCount < 2
-                        ? <button onClick={() => setAdminForm(f => ({ ...f, visible: true }))}>
+                        ? <button
+                            className="btn btn-primary"
+                            onClick={() => setAdminForm(f => ({ ...f, visible:true }))}
+                          >
                             Reservar día administrativo
                           </button>
-                        : <em>— límite alcanzado</em>
+                        : <em className="text-muted">— límite alcanzado</em>
                       )
                   }
                 </div>
               );
             })}
-
             {adminForm.visible && (
-              <form onSubmit={e => {
+              <form className="form-inline" onSubmit={e => {
                 e.preventDefault();
                 if (editTipo==='administrativo' && editId) {
                   handleUpdate(editId, { fecha: adminForm.fecha, descripcion: adminForm.descripcion });
@@ -192,57 +205,53 @@ export default function BeneficiosPage() {
                 setEditId(null);
                 setEditTipo(null);
               }}>
-                <label>
-                  Fecha:
-                  <input
-                    type="date"
-                    required
-                    value={adminForm.fecha}
-                    onChange={e => setAdminForm(f => ({ ...f, fecha: e.target.value }))}
-                    style={{ margin: '0 .5rem' }}
-                  />
-                </label>
-                <label>
-                  Descripción:
-                  <input
-                    type="text"
-                    placeholder="Opcional"
-                    value={adminForm.descripcion}
-                    onChange={e => setAdminForm(f => ({ ...f, descripcion: e.target.value }))}
-                    style={{ margin: '0 .5rem' }}
-                  />
-                </label>
-                <button type="submit">
+                <input
+                  type="date"
+                  required
+                  value={adminForm.fecha}
+                  onChange={e => setAdminForm(f => ({ ...f, fecha: e.target.value }))}
+                />
+                <input
+                  type="text"
+                  placeholder="Descripción opcional"
+                  value={adminForm.descripcion}
+                  onChange={e => setAdminForm(f => ({ ...f, descripcion: e.target.value }))}
+                />
+                <button type="submit" className="btn btn-primary">
                   {editTipo==='administrativo' ? 'Guardar Cambios' : 'Agregar Día Administrativo'}
                 </button>
-                <button type="button" onClick={() => {
-                  setAdminForm({ visible:false, fecha:'', descripcion:'' });
-                  setEditId(null);
-                  setEditTipo(null);
-                }} style={{ marginLeft: '.5rem' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setAdminForm({ visible:false, fecha:'', descripcion:'' });
+                    setEditId(null);
+                    setEditTipo(null);
+                  }}
+                >
                   Cancelar
                 </button>
               </form>
             )}
           </section>
 
-          {/* 3) Vacaciones */}
-          <section>
-            <h3>Vacaciones (Usados: {usedVacDays.length} días)</h3>
-            <ul>
+          {/* Vacaciones */}
+          <section className="section-card">
+            <h3>Vacaciones ({usedVacDays.length} días usados)</h3>
+            <ul className="vac-list">
               {usedVacDays.map((d,i) => (
                 <li key={i}>
                   {new Date(d).toLocaleDateString()}
-                  <button onClick={() => handleDelete(beneficios.find(b=>b.tipo==='vacaciones'&&b.fecha===d).id)} style={{ marginLeft: '.5rem' }}>
-                    🗑️
-                  </button>
+                  <button
+                    className="btn-icon btn-danger"
+                    onClick={() => handleDelete(beneficios.find(b=>b.tipo==='vacaciones'&&b.fecha===d).id)}
+                  >🗑️</button>
                 </li>
               ))}
             </ul>
 
-            <form onSubmit={async e => {
+            <form className="form-inline" onSubmit={async e => {
               e.preventDefault();
-              // Insertar cada día en el rango
               const start = new Date(vacForm.start);
               const end   = new Date(vacForm.end);
               if (end < start) {
@@ -262,37 +271,25 @@ export default function BeneficiosPage() {
               setVacForm({ start:'', end:'', descripcion:'' });
               load();
             }}>
-              <label>
-                Desde:
-                <input
-                  type="date"
-                  required
-                  value={vacForm.start}
-                  onChange={e => setVacForm(f => ({ ...f, start: e.target.value }))}
-                  style={{ margin: '0 .5rem' }}
-                />
-              </label>
-              <label>
-                Hasta:
-                <input
-                  type="date"
-                  required
-                  value={vacForm.end}
-                  onChange={e => setVacForm(f => ({ ...f, end: e.target.value }))}
-                  style={{ margin: '0 .5rem' }}
-                />
-              </label>
-              <label>
-                Descripción:
-                <input
-                  type="text"
-                  placeholder="Opcional"
-                  value={vacForm.descripcion}
-                  onChange={e => setVacForm(f => ({ ...f, descripcion: e.target.value }))}
-                  style={{ margin: '0 .5rem' }}
-                />
-              </label>
-              <button type="submit">Agregar Vacaciones</button>
+              <input
+                type="date"
+                required
+                value={vacForm.start}
+                onChange={e => setVacForm(f=>({...f,start:e.target.value}))}
+              />
+              <input
+                type="date"
+                required
+                value={vacForm.end}
+                onChange={e => setVacForm(f=>({...f,end:e.target.value}))}
+              />
+              <input
+                type="text"
+                placeholder="Descripción opcional"
+                value={vacForm.descripcion}
+                onChange={e => setVacForm(f=>({...f,descripcion:e.target.value}))}
+              />
+              <button type="submit" className="btn btn-primary">Agregar Vacaciones</button>
             </form>
           </section>
         </>
