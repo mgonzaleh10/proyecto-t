@@ -6,11 +6,17 @@ const {
   updateTurno: updateTurnoModel,
   eliminarTurno: eliminarTurnoModel,
   eliminarTodosTurnos
-} = require('../models/turno.model');                      // Importo funciones del modelo de turnos
-const { generarTurnosAutomaticamente } = require('../services/generadorHorarios'); // Servicio de generación automática
-const { sugerirIntercambio }       = require('../services/recomendacionesHorarios'); // Servicio de recomendaciones
-const { sendMail }                 = require('../services/emailService');            // Servicio de correo
-const pool                         = require('../config/db');                        // Pool para queries directas
+} = require('../models/turno.model');
+const { generarTurnosAutomaticamente } = require('../services/generadorHorarios');
+const { sugerirIntercambio } = require('../services/recomendacionesHorarios');
+const { sendMail } = require('../services/emailService');
+const pool = require('../config/db');
+
+// Helper para convertir "HH:MM" o "HH:MM:SS" a minutos
+function toMinutes(hm) {
+  const [h, m] = hm.split(':').map(Number);
+  return h * 60 + m;
+}
 
 // POST /turnos
 const registrarTurno = async (req, res) => {
@@ -22,13 +28,13 @@ const registrarTurno = async (req, res) => {
       const { usuario_id, fecha, hora_inicio, hora_fin, creado_por } = t;
       if (!usuario_id || !fecha || !hora_inicio || !hora_fin || !creado_por) continue;
 
-      // Parseo fecha local y obtengo día de la semana en minúsculas
+      // 1) Día de la semana en minúsculas
       const [y, m, d] = fecha.split('-').map(Number);
       const diaNombre = new Date(y, m - 1, d)
         .toLocaleDateString('es-CL', { weekday: 'long' })
         .toLowerCase();
 
-      // Valido disponibilidad
+      // 2) Obtenemos la disponibilidad del usuario para ese día
       const dispRes = await pool.query(
         `SELECT hora_inicio, hora_fin
          FROM disponibilidades
@@ -36,23 +42,45 @@ const registrarTurno = async (req, res) => {
         [usuario_id, diaNombre]
       );
 
-      if (
-        dispRes.rows.length === 0 ||
-        hora_inicio < dispRes.rows[0].hora_inicio ||
-        hora_fin > dispRes.rows[0].hora_fin
-      ) {
+      // 3) Preguntamos si puede cerrar (para excepciones de turno de cierre)
+      const userRes = await pool.query(
+        `SELECT puede_cerrar
+         FROM usuarios
+         WHERE id = $1`,
+        [usuario_id]
+      );
+      const puedeCerrar = !!userRes.rows[0]?.puede_cerrar;
+
+      // 4) Validación de disponibilidad en minutos
+      if (dispRes.rows.length === 0) {
         return res.status(400).json({
-          error: `No disponible el ${diaNombre} de ${dispRes.rows[0]?.hora_inicio || '--'} a ${dispRes.rows[0]?.hora_fin || '--'}.`
+          error: `No disponible el ${diaNombre} (sin disponibilidad definida).`
         });
       }
+      const availInicio = toMinutes(dispRes.rows[0].hora_inicio);
+      const availFin    = toMinutes(dispRes.rows[0].hora_fin);
+      const inInicio    = toMinutes(hora_inicio);
+      const inFin       = toMinutes(hora_fin);
 
-      // Creo el turno
+      const fueraDeRango = inInicio < availInicio || inFin > availFin;
+      if (fueraDeRango) {
+        // Permitimos solo turno de cierre si termina a 23:30 y puede_cerrar=true
+        if (!(puedeCerrar && hora_fin === '23:30')) {
+          return res.status(400).json({
+            error: `No disponible el ${diaNombre} de ${dispRes.rows[0].hora_inicio} a ${dispRes.rows[0].hora_fin}.`
+          });
+        }
+      }
+
+      // 5) Creo el turno
       const nuevo = await crearTurno(t);
       resultados.push(nuevo);
     }
 
     if (resultados.length === 0) {
-      return res.status(400).json({ error: 'No se pudo registrar ningún turno válido.' });
+      return res
+        .status(400)
+        .json({ error: 'No se pudo registrar ningún turno válido.' });
     }
 
     res.status(201).json(resultados);
@@ -63,7 +91,7 @@ const registrarTurno = async (req, res) => {
 };
 
 // GET /turnos
-const listarTurnos = async (req, res) => {
+const listarTurnos = async (_req, res) => {
   try {
     const t = await obtenerTurnos();
     res.json(t);
@@ -150,7 +178,7 @@ const eliminarTurno = async (req, res) => {
 };
 
 // DELETE /turnos
-const eliminarTodos = async (req, res) => {
+const eliminarTodos = async (_req, res) => {
   try {
     await eliminarTodosTurnos();
     res.json({ mensaje: 'Todos los turnos eliminados correctamente' });
@@ -168,7 +196,6 @@ const enviarCalendario = async (req, res) => {
       return res.status(400).json({ error: 'Faltan destinatarios, asunto o html' });
     }
 
-    // Busco data‑URI de la imagen en el HTML
     const match = html.match(/src="(data:image\/[^;]+;base64,[^"]+)"/);
     let finalHtml = html;
     const attachments = [];
@@ -177,10 +204,7 @@ const enviarCalendario = async (req, res) => {
       const dataUri = match[1];
       const [meta, b64] = dataUri.split(',');
       const ext = (meta.match(/image\/(.+);base64/) || [])[1] || 'png';
-
-      // Reemplazo data‑URI por CID
       finalHtml = html.replace(dataUri, 'cid:planilla@turnos');
-
       attachments.push({
         filename: `planilla.${ext}`,
         content: Buffer.from(b64, 'base64'),
@@ -188,7 +212,6 @@ const enviarCalendario = async (req, res) => {
       });
     }
 
-    // Envío el correo con attachments si existen
     await sendMail({
       to: destinatarios,
       subject: asunto,

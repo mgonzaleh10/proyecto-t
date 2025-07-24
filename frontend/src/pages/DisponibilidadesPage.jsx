@@ -1,41 +1,34 @@
-import React, { useState, useEffect } from 'react'; // Importo React y hooks
-import { getUsuarios } from '../api/usuarios'; // Importo función para obtener crews
+import React, { useState, useEffect } from 'react';
+import { getUsuarios } from '../api/usuarios';
 import {
   getDisponibilidades,
   crearDisponibilidad,
   eliminarDisponibilidad,
   eliminarTodasDisponibilidades
-} from '../api/disponibilidades'; // Importo API de disponibilidades
+} from '../api/disponibilidades';
+
+import './DisponibilidadesPage.css'; // Tus estilos estilo BK
 
 const DAY_LABELS = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
 
 export default function DisponibilidadesPage() {
-  // Estado para lista de crews
   const [crews, setCrews] = useState([]);
-  // Estado para crew seleccionado
   const [selectedCrew, setSelectedCrew] = useState('');
-  // Estado para inputs de horario: { día: { inicio, fin, id } }
   const [inputs, setInputs] = useState({});
-  // Estado para disponibilidades que vienen del servidor
   const [saved, setSaved] = useState([]);
 
-  // 1) Al montar, obtengo crews y disponibilidades
+  // Carga inicial
   useEffect(() => {
-    getUsuarios()
-      .then(r => setCrews(r.data))   // Guardo lista de crews
-      .catch(console.error);
-    getDisponibilidades()
-      .then(r => setSaved(r.data))   // Guardo disponibilidades
-      .catch(console.error);
+    getUsuarios().then(r => setCrews(r.data)).catch(console.error);
+    getDisponibilidades().then(r => setSaved(r.data)).catch(console.error);
   }, []);
 
-  // 2) Cuando cambia selectedCrew, precargo sus disponibilidades en inputs
+  // Precarga inputs al cambiar de crew
   useEffect(() => {
     if (!selectedCrew) {
-      setInputs({}); // Si no hay crew, limpio inputs
+      setInputs({});
       return;
     }
-    // Filtro disponibilidades del crew seleccionado
     const byCrew = saved.filter(d => d.usuario_id === Number(selectedCrew));
     const map = {};
     byCrew.forEach(d => {
@@ -45,10 +38,9 @@ export default function DisponibilidadesPage() {
         id:     d.id
       };
     });
-    setInputs(map); // Cargo inputs con datos precargados
+    setInputs(map);
   }, [selectedCrew, saved]);
 
-  // Manejo cambio de inputs de hora
   const handleChange = (day, field, val) => {
     setInputs(prev => ({
       ...prev,
@@ -59,49 +51,8 @@ export default function DisponibilidadesPage() {
     }));
   };
 
-  // 3) Guardar disponibilidades: borro y creo según inputs
-  const handleSave = async () => {
-    if (!selectedCrew) {
-      alert('Selecciona primero un crew.');
-      return;
-    }
-
-    // 3.a) Borro de la BD las disponibilidades que quité
-    const prevForCrew = saved.filter(d => d.usuario_id === Number(selectedCrew));
-    for (let d of prevForCrew) {
-      const entry = inputs[d.dia_semana];
-      if (!entry || !entry.inicio || !entry.fin) {
-        try {
-          await eliminarDisponibilidad(d.id); // Borro disposición
-        } catch (e) {
-          console.error('Error borrando disponibilidad:', e);
-        }
-      }
-    }
-
-    // 3.b) Construyo payload solo con días que tengan inicio+fin
-    const payload = Object.entries(inputs)
-      .filter(([_, v]) => v.inicio && v.fin)
-      .map(([dia_semana, v]) => ({
-        usuario_id: Number(selectedCrew),
-        dia_semana,
-        hora_inicio: v.inicio,
-        hora_fin:    v.fin
-      }));
-
-    if (payload.length === 0) {
-      alert('No hay disponibilidades para guardar.');
-    } else {
-      try {
-        await crearDisponibilidad(payload); // Creo disponibilidades nuevas
-        alert('Disponibilidades guardadas.');
-      } catch (e) {
-        console.error(e);
-        alert('Error al guardar disponibilidades.');
-      }
-    }
-
-    // 3.c) Recargo la lista completa después de guardar
+  // Recargar disponiblidades
+  const load = async () => {
     try {
       const r = await getDisponibilidades();
       setSaved(r.data);
@@ -110,74 +61,131 @@ export default function DisponibilidadesPage() {
     }
   };
 
-  // Eliminar todas las disponibilidades
+  const handleSave = async () => {
+    if (!selectedCrew) {
+      alert('Selecciona primero un crew.');
+      return;
+    }
+
+    const crewId = Number(selectedCrew);
+    const prevForCrew = saved.filter(d => d.usuario_id === crewId);
+
+    const toDelete = [];
+    const toCreate = [];
+
+    // 1) Detectar borrados y modificaciones
+    for (let d of prevForCrew) {
+      const entry = inputs[d.dia_semana];
+      // si se borró la entrada o le faltan horas, eliminamos
+      if (!entry || !entry.inicio || !entry.fin) {
+        toDelete.push(d.id);
+      } else {
+        // si cambió hora_inicio o hora_fin => eliminar y volver a crear
+        if (
+          entry.inicio !== d.hora_inicio.slice(0,5) ||
+          entry.fin    !== d.hora_fin.slice(0,5)
+        ) {
+          toDelete.push(d.id);
+          toCreate.push({
+            usuario_id: crewId,
+            dia_semana: d.dia_semana,
+            hora_inicio: entry.inicio,
+            hora_fin:    entry.fin
+          });
+        }
+      }
+    }
+
+    // 2) Detectar sólo-nuevos (sin id)
+    Object.entries(inputs).forEach(([dia_semana, v]) => {
+      if (v.inicio && v.fin && !v.id) {
+        toCreate.push({
+          usuario_id: crewId,
+          dia_semana,
+          hora_inicio: v.inicio,
+          hora_fin:    v.fin
+        });
+      }
+    });
+
+    // 3) Ejecutar eliminaciones
+    for (let id of toDelete) {
+      try { await eliminarDisponibilidad(id); }
+      catch (e) { console.error('Error borrando:', e); }
+    }
+
+    // 4) Ejecutar creaciones
+    if (toCreate.length > 0) {
+      try {
+        await crearDisponibilidad(toCreate);
+        alert('Disponibilidades guardadas.');
+      } catch (e) {
+        console.error('Error creando:', e);
+        alert('Error al guardar disponibilidades.');
+      }
+    } else {
+      alert('No hay cambios nuevos para guardar.');
+    }
+
+    // 5) Recargar estado
+    await load();
+  };
+
   const handleClearAll = async () => {
     if (!window.confirm('¿Eliminar TODAS las disponibilidades?')) return;
     try {
-      await eliminarTodasDisponibilidades(); // Borro todo
-      setSaved([]);  // Limpio estado local
-      setInputs({}); // Limpio inputs
-      alert('Eliminadas todas.');
+      await eliminarTodasDisponibilidades();
+      setSaved([]);
+      setInputs({});
+      alert('Todas las disponibilidades eliminadas.');
     } catch (e) {
       console.error(e);
-      alert('Error al eliminar todo.');
+      alert('Error al eliminar todas.');
     }
   };
 
   return (
-    <div style={{ padding: '2rem' }}> {/* Renderizo contenedor principal */}
-      <h2>Configuración de Disponibilidades</h2> {/* Título de la página */}
+    <div className="disp-container">
+      <header className="disp-header">
+        <h2>Configuración de Disponibilidades</h2>
+      </header>
 
-      <div style={{ marginBottom: '1rem' }}>
-        {/* Selector de crew */}
-        <label>
-          Elige un crew:
-          <select
-            value={selectedCrew}
-            onChange={e => setSelectedCrew(e.target.value)} // Actualizo crew seleccionado
-            style={{ marginLeft: '0.5rem' }}
-          >
-            <option value="">-- Seleccionar --</option>
-            {crews.map(u => (
-              <option key={u.id} value={u.id}>
-                {u.nombre}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="disp-form-group">
+        <label>Elige un crew:</label>
+        <select
+          value={selectedCrew}
+          onChange={e => setSelectedCrew(e.target.value)}
+          className="disp-select"
+        >
+          <option value="">-- Seleccionar --</option>
+          {crews.map(u => (
+            <option key={u.id} value={u.id}>{u.nombre}</option>
+          ))}
+        </select>
       </div>
 
       {selectedCrew && (
         <>
-          {/* Tabla de inputs por día */}
-          <table
-            style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              marginBottom: '1rem'
-            }}
-          >
+          <table className="disp-table">
             <thead>
               <tr>
-                <th style={th}>Día</th>
-                <th style={th}>Hora inicio</th>
-                <th style={th}>Hora fin</th>
+                <th>Día</th>
+                <th>Inicio</th>
+                <th>Fin</th>
               </tr>
             </thead>
             <tbody>
               {DAY_LABELS.map(dia => (
                 <tr key={dia}>
-                  <td style={td}>{dia}</td>
-                  <td style={td}>
-                    {/* Input de hora inicio */}
+                  <td>{dia}</td>
+                  <td>
                     <input
                       type="time"
                       value={inputs[dia]?.inicio || ''}
                       onChange={e => handleChange(dia, 'inicio', e.target.value)}
                     />
                   </td>
-                  <td style={td}>
-                    {/* Input de hora fin */}
+                  <td>
                     <input
                       type="time"
                       value={inputs[dia]?.fin || ''}
@@ -189,29 +197,16 @@ export default function DisponibilidadesPage() {
             </tbody>
           </table>
 
-          {/* Botones de acción */}
-          <button onClick={handleSave} style={btn}>
-            Guardar disponibilidades
-          </button>
-          <button
-            onClick={handleClearAll}
-            style={{ ...btn, marginLeft: '1rem', background: '#c00' }}
-          >
-            Eliminar todo
-          </button>
+          <div className="disp-actions">
+            <button className="btn-primary" onClick={handleSave}>
+              Guardar Disponibilidades
+            </button>
+            <button className="btn-danger" onClick={handleClearAll}>
+              Eliminar Todas
+            </button>
+          </div>
         </>
       )}
     </div>
   );
 }
-
-// Estilos en línea para tabla y botones
-const th = { border: '1px solid #ccc', padding: '0.5rem', background: '#f7f7f7' };
-const td = { border: '1px solid #ccc', padding: '0.5rem' };
-const btn = {
-  padding: '0.5rem 1rem',
-  background: '#0066cc',
-  color: 'white',
-  border: 'none',
-  cursor: 'pointer'
-};
