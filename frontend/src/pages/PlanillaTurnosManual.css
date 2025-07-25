@@ -45,11 +45,21 @@
   color: #fff;         /* Texto blanco */
 }
 
+/* Botón de envío de correo */
+.planilla-controls .btn-email {
+  background: #0066cc; /* Azul BK */
+  color: #fff;
+  margin-left: 0.5rem;
+}
+
 /* Tabla de turnos */
 .planilla-table {
   width: 100%; /* Ocupo todo el ancho */
   border-collapse: collapse; /* Sin espacios entre celdas */
   margin-top: 1rem;
+  /* Borde y sombra ligera */
+  border: 1px solid #8a4221;              /* borde marrón BK */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);   /* sombra sutil */
 }
 
 /* Celdas y encabezados de tabla */
@@ -65,6 +75,8 @@
   background: #8a4221; /* Marrón oscuro */
   color: #fff;         /* Blanco para contraste */
   font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* Primera columna (nombres de crew) */
@@ -136,9 +148,24 @@
   margin: 0;
 }
 
-/* Botón de envío de correo */
-.planilla-controls .btn-email {
-  background: #0066cc; /* Azul BK */
-  color: #fff;
-  margin-left: 0.5rem;
+/* --- Nuevas reglas para mejorar la apariencia --- */
+
+/* 1) Inputs deshabilitados (día libre) con fondo verde claro */
+.planilla-table input[disabled] {
+  background-color: #C8E6C9;  /* light green */
+  color: #000;                /* texto negro para contraste */
+  cursor: default;            /* quita el icono de no permitido */
+}
+
+/* 2) Filas alternadas para mejor lectura */
+.planilla-table tbody tr:nth-child(odd) {
+  background-color: #FFF5E1;  /* tono crema suave */
+}
+.planilla-table tbody tr:nth-child(even) {
+  background-color: #FFFFFF;  /* blanco puro */
+}
+
+/* 3) Hover en filas para feedback */
+.planilla-table tbody tr:hover {
+  background-color: #FFE0B2;  /* naranja muy suave */
 }
