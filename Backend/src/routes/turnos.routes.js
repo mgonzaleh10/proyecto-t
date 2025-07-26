@@ -1,6 +1,8 @@
-// Importo express y creo el router
+// src/routes/turnos.routes.js
+
 const express = require('express');
-const router = express.Router();
+const router  = express.Router();
+
 const {
   registrarTurno,
   listarTurnos,
@@ -11,31 +13,54 @@ const {
   actualizarTurno,
   eliminarTurno,
   eliminarTodos,
-  enviarCalendario
+  enviarCalendario,
+  resumenTurnos
 } = require('../controllers/turnos.controller');
 
-// Registro uno o varios turnos
+// 1️⃣ Registro uno o varios turnos
 router.post('/', registrarTurno);
-// Obtengo todos los turnos
+
+// 2️⃣ Obtengo todos los turnos
 router.get('/', listarTurnos);
-// Obtengo turnos de un usuario por ID
-router.get('/:id', turnosPorUsuario);
+
+// — Static routes (must come before `/:id`) —
+
+// Resumen entre dos fechas
+// GET /turnos/resumen?fechaInicio=YYYY-MM-DD&fechaFin=YYYY-MM-DD
+router.get('/resumen', resumenTurnos);
+
 // Obtengo turnos por fecha específica
+// GET /turnos/fecha/:fecha
 router.get('/fecha/:fecha', turnosPorFecha);
-// Actualizo un turno por ID
-router.put('/:id', actualizarTurno);
 
 // Genero el horario automáticamente
+// POST /turnos/generar
 router.post('/generar', generarHorario);
+
 // Sugiero intercambios de turnos
+// POST /turnos/intercambio
 router.post('/intercambio', recomendarIntercambio);
 
-// Elimino un turno por ID
-router.delete('/:id', eliminarTurno);
-// Elimino todos los turnos
-router.delete('/', eliminarTodos);
-
 // Envío por correo el calendario de turnos
+// POST /turnos/enviar-correo
 router.post('/enviar-correo', enviarCalendario);
 
-module.exports = router; // Exporto el router de turnos
+// — end static routes —
+
+// 3️⃣ Obtengo turnos de un usuario por ID
+// GET /turnos/:id
+router.get('/:id', turnosPorUsuario);
+
+// 4️⃣ Actualizo un turno por ID
+// PUT /turnos/:id
+router.put('/:id', actualizarTurno);
+
+// 5️⃣ Elimino un turno por ID
+// DELETE /turnos/:id
+router.delete('/:id', eliminarTurno);
+
+// 6️⃣ Elimino todos los turnos
+// DELETE /turnos
+router.delete('/', eliminarTodos);
+
+module.exports = router;

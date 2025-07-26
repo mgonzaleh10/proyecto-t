@@ -6,11 +6,12 @@ import {
   updateTurno,
   eliminarTurno,
   getTurnosPorFecha,
-  eliminarTodosTurnos,  // Importo para borrar todos los turnos
-  enviarCalendario      // Importo la API para envío de correo
+  eliminarTodosTurnos,
+  enviarCalendario
 } from '../api/turnos';                                      // Importo API de turnos
 import { getUsuarios } from '../api/usuarios';               // Importo API de usuarios
 import { getDisponibilidades } from '../api/disponibilidades'; // Importo API de disponibilidades
+import { getBeneficios } from '../api/beneficios';           // Importo API de beneficios
 
 import './PlanillaTurnosManual.css'; // Importo estilos
 
@@ -32,8 +33,7 @@ function parseLocalDate(ymd) {
 // Obtengo array de fechas de lunes a domingo basado en baseDate
 function getWeekDates(base) {
   const date = typeof base === 'string' ? parseLocalDate(base) : new Date(base);
-  const day  = date.getDay();         // 0=Dom
-  const diff = (day + 6) % 7;         // Ajuste para lunes
+  const diff = (date.getDay() + 6) % 7; // Ajuste para lunes como inicio
   const mon  = new Date(date);
   mon.setDate(date.getDate() - diff);
   return Array.from({ length: 7 }, (_, i) => {
@@ -51,62 +51,15 @@ export default function PlanillaTurnosManual() {
   const [cells,     setCells]     = useState({});
   const [editing,   setEditing]   = useState(false);
   const [disps,     setDisps]     = useState({});
+  // Ahora benefits mapea usuario_id → { 'YYYY-MM-DD': tipo }
+  const [benefits,  setBenefits]  = useState({});
 
-  // 1) Cargo o recargo datos de turnos y estado 'free' al cambiar semana
-  const loadData = useCallback(async () => {
-    const all = [];
-    for (const d of weekDates) {
-      const fecha = d.toISOString().slice(0,10);
-      try {
-        const r = await getTurnosPorFecha(fecha);
-        all.push(...r.data);
-      } catch {}
-    }
-    // Construyo mapa de celdas con turnos existentes
-    const m = {};
-    all.forEach(t => {
-      const idx = weekDates.findIndex(dd => dd.toISOString().slice(0,10) === t.fecha.slice(0,10));
-      if (idx >= 0) {
-        m[t.usuario_id] = m[t.usuario_id] || {};
-        m[t.usuario_id][idx] = {
-          id:     t.id,
-          inicio: t.hora_inicio.slice(0,5),
-          fin:    t.hora_fin.slice(0,5),
-          free:   false
-        };
-      }
-    });
-    // Aplico estado 'free' desde localStorage
-    const store = JSON.parse(localStorage.getItem(FREE_KEY) || '{}');
-    Object.entries(store).forEach(([uid, fechas]) => {
-      const crewId = Number(uid);
-      fechas.forEach(fechaStr => {
-        const idx = weekDates.findIndex(dd => dd.toISOString().slice(0,10) === fechaStr);
-        if (idx >= 0) {
-          m[crewId] = m[crewId] || {};
-          m[crewId][idx] = { free: true };
-        }
-      });
-    });
-    setCells(m);
-  }, [weekDates]);
-
-  // 2) Cuando cambie baseDate, recalculo weekDates
-  useEffect(() => {
-    setWeekDates(getWeekDates(baseDate));
-  }, [baseDate]);
-
-  // 3) Recargo datos cuando cambian las fechas de la semana
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  // 4) Cargo la lista de usuarios (crews)
+  // 1) Cargo crews
   useEffect(() => {
     getUsuarios().then(r => setCrews(r.data)).catch(console.error);
   }, []);
 
-  // 5) Cargo disponibilidades para validar inputs
+  // 2) Cargo disponibilidades
   useEffect(() => {
     getDisponibilidades()
       .then(r => {
@@ -124,19 +77,76 @@ export default function PlanillaTurnosManual() {
       .catch(console.error);
   }, []);
 
-  // Alterno estado 'libre' y guardo en localStorage
+  // 3) Cargo beneficios con su tipo
+  useEffect(() => {
+    getBeneficios()
+      .then(r => {
+        const m = {};
+        r.data.forEach(b => {
+          const f = b.fecha.slice(0,10);
+          m[b.usuario_id] = m[b.usuario_id] || {};
+          m[b.usuario_id][f] = b.tipo;  // 'cumpleaños', 'administrativo' o 'vacaciones'
+        });
+        setBenefits(m);
+      })
+      .catch(console.error);
+  }, []);
+
+  // 4) Recalculo fechas de la semana al cambiar baseDate
+  useEffect(() => {
+    setWeekDates(getWeekDates(baseDate));
+  }, [baseDate]);
+
+  // 5) Cargo turnos + estado 'free' en la tabla
+  const loadData = useCallback(async () => {
+    const all = [];
+    for (const d of weekDates) {
+      const fecha = d.toISOString().slice(0,10);
+      try {
+        const r = await getTurnosPorFecha(fecha);
+        all.push(...r.data);
+      } catch {}
+    }
+    const m = {};
+    all.forEach(t => {
+      const idx = weekDates.findIndex(dd => dd.toISOString().slice(0,10) === t.fecha.slice(0,10));
+      if (idx >= 0) {
+        m[t.usuario_id] = m[t.usuario_id] || {};
+        m[t.usuario_id][idx] = {
+          id:     t.id,
+          inicio: t.hora_inicio.slice(0,5),
+          fin:    t.hora_fin.slice(0,5),
+          free:   false
+        };
+      }
+    });
+    // Aplico 'free' de localStorage
+    const store = JSON.parse(localStorage.getItem(FREE_KEY) || '{}');
+    Object.entries(store).forEach(([uid, fechas]) => {
+      fechas.forEach(f => {
+        const idx = weekDates.findIndex(dd => dd.toISOString().slice(0,10) === f);
+        if (idx >= 0) {
+          m[uid] = m[uid] || {};
+          m[uid][idx] = { free: true };
+        }
+      });
+    });
+    setCells(m);
+  }, [weekDates]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // 6) Función toggle 'Libre'
   const toggleLibre = (crewId, dayIdx) => {
     setCells(prev => {
-      const next = {
-        ...prev,
-        [crewId]: {
-          ...prev[crewId],
-          [dayIdx]: {
-            ...(prev[crewId]?.[dayIdx] || {}),
-            free: !prev[crewId]?.[dayIdx]?.free
-          }
-        }
+      const next = { ...prev, [crewId]: { ...prev[crewId] } };
+      next[crewId][dayIdx] = {
+        ...(prev[crewId]?.[dayIdx] || {}),
+        free: !prev[crewId]?.[dayIdx]?.free
       };
+      // Actualizo localStorage
       const fecha = weekDates[dayIdx].toISOString().slice(0,10);
       const store = JSON.parse(localStorage.getItem(FREE_KEY) || '{}');
       const setFechas = new Set(store[crewId] || []);
@@ -148,7 +158,7 @@ export default function PlanillaTurnosManual() {
     });
   };
 
-  // Cambio manual de inicio/fin en edición
+  // 7) Cambio manual de horas
   const handleCellChange = (crewId, dayIdx, field, val) => {
     setCells(prev => ({
       ...prev,
@@ -163,7 +173,7 @@ export default function PlanillaTurnosManual() {
     }));
   };
 
-  // Calculo horas trabajadas de un crew
+  // 8) Cálculo horas trabajadas
   const horasTrabajadas = crewId => {
     const row = cells[crewId] || {};
     let total = 0;
@@ -176,73 +186,76 @@ export default function PlanillaTurnosManual() {
     return +total.toFixed(1);
   };
 
-  // Guardar cambios: valida, borra, actualiza y crea
+  // 9) Guardar todos los cambios
   const saveAll = async () => {
-    // 1) VALIDACIÓN LOCAL: ningún turno fuera de su rango de disponibilidad
+    // Validación local: bloqueo días con beneficio
     for (const crew of crews) {
       const row = cells[crew.id] || {};
       for (let i = 0; i < 7; i++) {
         const c     = row[i];
-        const day   = DAY_LABELS[i];
-        const dayKey= day.toLowerCase();
-        const avail = disps[crew.id]?.[dayKey];
+        const fecha = weekDates[i].toISOString().slice(0,10);
+        if (benefits[crew.id]?.[fecha]) {
+          // no toco ese día
+          continue;
+        }
+        // validación disponibilidad
         if (c && !c.free && c.inicio && c.fin) {
-          // comparo en minutos para incluir igualdad
-          if (
-            !avail ||
-            parseTime(c.inicio) < parseTime(avail.inicio) ||
-            parseTime(c.fin) > parseTime(avail.fin)
+          const avail = disps[crew.id]?.[DAY_LABELS[i].toLowerCase()];
+          if (!avail
+            || parseTime(c.inicio) < parseTime(avail.inicio)
+            || parseTime(c.fin)    > parseTime(avail.fin)
           ) {
-            alert(
-              `No puede guardar: ${crew.nombre} el ${day} de ${c.inicio} a ${c.fin} ` +
-              `(su disponibilidad es ${avail?.inicio || '--'}–${avail?.fin || '--'})`
-            );
-            return; // abortamos sin tocar servidor
+            alert(`No puede guardar: ${crew.nombre} el ${DAY_LABELS[i]} de ${c.inicio} a ${c.fin} (disp ${avail?.inicio||'--'}–${avail?.fin||'--'})`);
+            return;
           }
         }
       }
     }
 
-    // 2) TODO pasó validación: envío operaciones al servidor
+    // Envío al servidor
     for (const crew of crews) {
       const row = cells[crew.id] || {};
       for (let i = 0; i < 7; i++) {
-        const c       = row[i];
-        if (!c) continue;
+        const c     = row[i];
+        const fecha = weekDates[i].toISOString().slice(0,10);
+
+        // salto días con beneficio
+        if (benefits[crew.id]?.[fecha]) continue;
 
         const payload = {
-          fecha:       weekDates[i].toISOString().slice(0,10),
-          hora_inicio: c.inicio,
-          hora_fin:    c.fin,
+          fecha,
+          hora_inicio: c?.inicio,
+          hora_fin:    c?.fin,
           creado_por:  19,
           observaciones:''
         };
 
-        // 2.a) si usuario borró los tiempos (inputs vacíos), elimino turno existente
-        if ((!c.inicio || !c.fin) && c.id) {
+        // eliminar turno si borró horas
+        if ((!c?.inicio || !c?.fin) && c?.id) {
           await eliminarTurno(c.id);
           continue;
         }
 
-        // 2.b) si marcó libre, también elimino
-        if (c.free) {
+        // eliminar si marcó libre
+        if (c?.free) {
           if (c.id) await eliminarTurno(c.id);
           continue;
         }
 
-        // 2.c) si tiene inicio y fin, actualizo o creo
-        if (c.inicio && c.fin) {
+        // actualizar o crear
+        if (c?.inicio && c?.fin) {
           if (c.id) await updateTurno(c.id, payload);
-          else    await crearTurno({ ...payload, usuario_id: crew.id });
+          else      await crearTurno({ usuario_id: crew.id, ...payload });
         }
       }
     }
 
     setEditing(false);
     await loadData();
+    alert('Turnos procesados.');
   };
 
-  // Genero resumen diario de cobertura y cierres
+  // 10) Resumen diario
   const summary = weekDates.map((_, i) => {
     let total = 0, open = 0, close = 0;
     crews.forEach(c => {
@@ -257,7 +270,7 @@ export default function PlanillaTurnosManual() {
     return { total, open, close };
   });
 
-  // Envío de correo con captura
+  // 11) Envío de correo
   const handleSendEmail = async () => {
     if (!window.confirm('¿Enviar la foto de esta planilla por correo?')) return;
     try {
@@ -265,37 +278,28 @@ export default function PlanillaTurnosManual() {
       const canvas  = await html2canvas(tableEl);
       const img     = canvas.toDataURL('image/png');
       const destinatarios = crews.map(u => u.correo);
-      const htmlBody = `<h2>Planilla de Turnos - Semana del ${baseDate}</h2>
-        <img src="${img}" style="max-width:100%;" />`;
-
       await enviarCalendario({
         destinatarios,
         asunto: `Planilla Turnos ${baseDate}`,
-        html: htmlBody
+        html: `<h2>Planilla de Turnos - Semana del ${baseDate}</h2><img src="${img}" style="max-width:100%;" />`
       });
       alert('Correos enviados correctamente.');
-    } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.error || err.message || 'Error al enviar correos.');
+    } catch {
+      alert('Error al enviar correos.');
     }
   };
 
-  // Limpio tabla completa (turnos + libres)
+  // 12) Limpiar tabla
   const handleClearTable = async () => {
     if (!window.confirm('¿Borrar todos los turnos y libres asignados?')) return;
-    try {
-      await eliminarTodosTurnos();
-      localStorage.removeItem(FREE_KEY);
-      setEditing(false);
-      await loadData();
-      alert('Tabla limpiada.');
-    } catch (err) {
-      console.error(err);
-      alert('Error al limpiar.');
-    }
+    await eliminarTodosTurnos();
+    localStorage.removeItem(FREE_KEY);
+    setEditing(false);
+    await loadData();
+    alert('Tabla limpiada.');
   };
 
-  // Editar / Cancelar recarga al cancelar
+  // 13) Toggle edición
   const handleToggleEdit = () => {
     if (editing) {
       loadData();
@@ -309,42 +313,26 @@ export default function PlanillaTurnosManual() {
     <div className="planilla-container">
       <h2>Calendario Manual de Turnos</h2>
 
-      <div
-        className="planilla-controls"
-        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-      >
+      <div className="planilla-controls">
         <div>
-          <Link to="/usuarios">
-            <button style={{ marginRight: '1rem' }}>Ir a Crews</button>
-          </Link>
+          <Link to="/usuarios"><button style={{marginRight:'1rem'}}>Ir a Crews</button></Link>
           <label>
             Semana:
             <input
               type="date"
               value={baseDate}
               onChange={e => setBaseDate(e.target.value)}
-              style={{ margin: '0 1rem' }}
+              style={{margin:'0 1rem'}}
             />
           </label>
           <button className="btn-edit" onClick={handleToggleEdit}>
             {editing ? 'Cancelar' : 'Editar'}
           </button>
-          {editing && (
-            <button className="btn-save" onClick={saveAll} style={{ marginLeft: '1rem' }}>
-              Guardar Cambios
-            </button>
-          )}
+          {editing && <button className="btn-save" onClick={saveAll} style={{marginLeft:'1rem'}}>Guardar Cambios</button>}
         </div>
         <div>
-          <button
-            style={{ marginRight: '1rem', background: '#c00', color: '#fff' }}
-            onClick={handleClearTable}
-          >
-            Limpiar tabla
-          </button>
-          <button className="btn-email" onClick={handleSendEmail}>
-            Enviar por correo
-          </button>
+          <button onClick={handleClearTable} style={{marginRight:'1rem',background:'#c00',color:'#fff'}}>Limpiar tabla</button>
+          <button className="btn-email" onClick={handleSendEmail}>Enviar por correo</button>
         </div>
       </div>
 
@@ -353,86 +341,91 @@ export default function PlanillaTurnosManual() {
           <tr>
             <th>Crew / Día</th>
             {weekDates.map((d, i) => (
-              <th key={i}>
-                {DAY_LABELS[i]}<br />{d.toLocaleDateString()}
-              </th>
+              <th key={i}>{DAY_LABELS[i]}<br/>{d.toLocaleDateString()}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {crews.map(c => (
             <tr key={c.id}>
-              <td className="first-col">
-                {c.nombre} ({horasTrabajadas(c.id)}/{c.horas_contrato})
-              </td>
-              {weekDates.map((_, i) => {
-                const cell    = cells[c.id]?.[i];
-                const dayKey  = DAY_LABELS[i].toLowerCase();
-                const avail   = disps[c.id]?.[dayKey];
-                const isAssigned = cell && !cell.free && cell.inicio && cell.fin;
-                const isFree     = cell?.free;
-                let className = '';
-                if (isAssigned) className = 'assigned-cell';
-                else if (isFree) className = 'free-cell';
-
-                return (
-                  <td key={i} className={className}>
-                    {editing ? (
-                      avail ? (
-                        isFree ? (
-                          <div className="free-cell-edit">
-                            <button
-                              className="btn-free edit-center"
-                              onClick={() => toggleLibre(c.id, i)}
-                            >
-                              Libre
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <input
-                              type="time"
-                              min={avail.inicio}
-                              max={avail.fin}
-                              value={cell?.inicio || ''}
-                              onChange={e =>
-                                handleCellChange(c.id, i, 'inicio', e.target.value)
-                              }
-                            />
-                            –
-                            <input
-                              type="time"
-                              min={avail.inicio}
-                              max={avail.fin}
-                              value={cell?.fin || ''}
-                              onChange={e =>
-                                handleCellChange(c.id, i, 'fin', e.target.value)
-                              }
-                            />
-                            <button
-                              className="btn-block"
-                              onClick={() => toggleLibre(c.id, i)}
-                            >
-                              ⛔
-                            </button>
-                          </>
-                        )
-                      ) : (
-                        <span className="not-available">No disponible</span>
-                      )
-                    ) : isFree ? (
-                      <span className="free-label">Libre</span>
-                    ) : isAssigned ? (
-                      `${cell.inicio}–${cell.fin}`
-                    ) : avail ? (
-                      <span className="disp-range">
-                        Disp {avail.inicio}–{avail.fin}
-                      </span>
-                    ) : (
+              <td className="first-col">{c.nombre} ({horasTrabajadas(c.id)}/{c.horas_contrato})</td>
+              {weekDates.map((d, i) => {
+                const fecha = d.toISOString().slice(0,10);
+                // 👉 Beneficio: muestra tipo y color adecuado
+                const tipo = benefits[c.id]?.[fecha];
+                if (tipo) {
+                  return <td key={i} className={`benefit-${tipo}`}>{tipo}</td>;
+                }
+                // Si no hay beneficio, lógica normal
+                const t     = cells[c.id]?.[i];
+                const avail = disps[c.id]?.[DAY_LABELS[i].toLowerCase()];
+                if (editing) {
+                  if (t?.free) {
+                    return (
+                      <td key={i} className="free-cell">
+                        <button className="btn-free edit-center" onClick={() => toggleLibre(c.id, i)}>
+                          Libre
+                        </button>
+                      </td>
+                    );
+                  }
+                  if (avail) {
+                    return (
+                      <td key={i}>
+                        <input
+                          type="time"
+                          min={avail.inicio}
+                          max={avail.fin}
+                          value={t?.inicio || ''}
+                          onChange={e => handleCellChange(c.id, i, 'inicio', e.target.value)}
+                        />{' '}
+                        –{' '}
+                        <input
+                          type="time"
+                          min={avail.inicio}
+                          max={avail.fin}
+                          value={t?.fin || ''}
+                          onChange={e => handleCellChange(c.id, i, 'fin', e.target.value)}
+                        />
+                        <button className="btn-block" onClick={() => toggleLibre(c.id, i)}>
+                          ⛔
+                        </button>
+                      </td>
+                    );
+                  }
+                  return (
+                    <td key={i}>
                       <span className="not-available">No disponible</span>
-                    )}
-                  </td>
-                );
+                    </td>
+                  );
+                } else {
+                  if (t?.free) {
+                    return (
+                      <td key={i} className="free-cell">
+                        <span className="free-label">Libre</span>
+                      </td>
+                    );
+                  }
+                  if (t?.inicio && t?.fin) {
+                    return (
+                      <td key={i} className="assigned-cell">
+                        {t.inicio}–{t.fin}
+                      </td>
+                    );
+                  }
+                  if (avail) {
+                    return (
+                      <td key={i} className="disp-range">
+                        Disp {avail.inicio}–{avail.fin}
+                      </td>
+                    );
+                  }
+                  return (
+                    <td key={i}>
+                      <span className="not-available">No disponible</span>
+                    </td>
+                  );
+                }
               })}
             </tr>
           ))}
@@ -441,9 +434,7 @@ export default function PlanillaTurnosManual() {
           <tr>
             <td>Resumen</td>
             {summary.map(({ total, open, close }, i) => (
-              <td key={i}>
-                {total} (A:{open} C:{close})
-              </td>
+              <td key={i}>{total} (A:{open} C:{close})</td>
             ))}
           </tr>
         </tfoot>

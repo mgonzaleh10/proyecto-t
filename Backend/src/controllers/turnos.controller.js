@@ -226,6 +226,31 @@ const enviarCalendario = async (req, res) => {
   }
 };
 
+// GET /turnos/resumen
+const resumenTurnos = async (req, res) => {
+  try {
+    const { fechaInicio, fechaFin } = req.query;
+    const { rows } = await pool.query(
+      `SELECT 
+         t.usuario_id,
+         u.nombre,
+         COUNT(*)               AS total_turnos,
+         SUM((hora_fin = '23:30')::int)             AS cierres,
+         SUM((hora_inicio BETWEEN '08:00' AND '10:00')::int) AS aperturas
+       FROM turnos t
+       JOIN usuarios u ON u.id = t.usuario_id
+       WHERE fecha BETWEEN $1 AND $2
+       GROUP BY t.usuario_id, u.nombre
+       ORDER BY cierres DESC, aperturas DESC;`,
+      [fechaInicio, fechaFin]
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error('❌ Error al obtener resumen de turnos:', error);
+    res.status(500).json({ error: 'Error del servidor' });
+  }
+};
+
 module.exports = {
   registrarTurno,
   listarTurnos,
@@ -236,5 +261,6 @@ module.exports = {
   actualizarTurno,
   eliminarTurno,
   eliminarTodos,
-  enviarCalendario
+  enviarCalendario,
+  resumenTurnos
 };

@@ -169,3 +169,91 @@
 .planilla-table tbody tr:hover {
   background-color: #FFE0B2;  /* naranja muy suave */
 }
+
+/* Cumpleaños: rosa suave */
+.planilla-table .benefit-cumpleaños {
+  background-color: #F8BBD0;
+  color: #880E4F;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* Administrativo: amarillo suave */
+.planilla-table .benefit-administrativo {
+  background-color: #FFF9C4;
+  color: #F57F17;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* Vacaciones: verde suave */
+.planilla-table .benefit-vacaciones {
+  background-color: #C8E6C9;
+  color: #1B5E20;
+  font-weight: bold;
+  text-align: center;
+}
+.input-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-family: Arial, sans-serif;
+}
+
+.input-table th,
+.input-table td {
+  border: 1px solid #ccc;
+  padding: 0.6rem;
+  text-align: center;
+}
+
+/* Cabecera */
+.input-table th {
+  background: #fff3c7;      /* amarillo claro */
+  color: #3D2314;           /* marrón */
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+/* Primera columna (día) */
+.input-table td:first-child {
+  background: #fff3c7;
+  color: #3D2314;
+  font-weight: bold;
+  text-align: left;
+}
+
+/* Filas alternadas */
+.input-table tbody tr:nth-child(odd) {
+  background-color: #FFF5E1;
+}
+.input-table tbody tr:nth-child(even) {
+  background-color: #ffffff;
+}
+
+/* Hover */
+.input-table tbody tr:hover {
+  background-color: #FFE0B2;
+}
+
+/* Inputs ocupan todo el ancho */
+.input-table input[type="time"] {
+  width: 100%;
+  padding: 0.25rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Botón Libre */
+.input-table .btn-free {
+  background: #388E3C;  /* verde */
+  color: #fff;
+  padding: 0.3rem 0.6rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.input-table .btn-free:hover {
+  opacity: 0.9;
+}
