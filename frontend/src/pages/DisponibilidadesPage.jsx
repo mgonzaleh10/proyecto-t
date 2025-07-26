@@ -7,7 +7,7 @@ import {
   eliminarTodasDisponibilidades
 } from '../api/disponibilidades';
 
-import './DisponibilidadesPage.css'; // Tus estilos estilo BK
+import './DisponibilidadesPage.css';
 
 const DAY_LABELS = ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'];
 
@@ -51,7 +51,7 @@ export default function DisponibilidadesPage() {
     }));
   };
 
-  // Recargar disponiblidades
+  // Recargar disponibilidades
   const load = async () => {
     try {
       const r = await getDisponibilidades();
@@ -76,23 +76,19 @@ export default function DisponibilidadesPage() {
     // 1) Detectar borrados y modificaciones
     for (let d of prevForCrew) {
       const entry = inputs[d.dia_semana];
-      // si se borró la entrada o le faltan horas, eliminamos
       if (!entry || !entry.inicio || !entry.fin) {
         toDelete.push(d.id);
-      } else {
-        // si cambió hora_inicio o hora_fin => eliminar y volver a crear
-        if (
-          entry.inicio !== d.hora_inicio.slice(0,5) ||
-          entry.fin    !== d.hora_fin.slice(0,5)
-        ) {
-          toDelete.push(d.id);
-          toCreate.push({
-            usuario_id: crewId,
-            dia_semana: d.dia_semana,
-            hora_inicio: entry.inicio,
-            hora_fin:    entry.fin
-          });
-        }
+      } else if (
+        entry.inicio !== d.hora_inicio.slice(0,5) ||
+        entry.fin    !== d.hora_fin.slice(0,5)
+      ) {
+        toDelete.push(d.id);
+        toCreate.push({
+          usuario_id: crewId,
+          dia_semana: d.dia_semana,
+          hora_inicio: entry.inicio,
+          hora_fin:    entry.fin
+        });
       }
     }
 
@@ -147,7 +143,7 @@ export default function DisponibilidadesPage() {
   return (
     <div className="disp-container">
       <header className="disp-header">
-        <h2>Configuración de Disponibilidades</h2>
+        <h3>Configuración de Disponibilidades</h3>
       </header>
 
       <div className="disp-form-group">
@@ -208,5 +204,5 @@ export default function DisponibilidadesPage() {
         </>
       )}
     </div>
-  );
+);
 }

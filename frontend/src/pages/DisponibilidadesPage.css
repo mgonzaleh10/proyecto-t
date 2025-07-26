@@ -1,12 +1,16 @@
+/* Contenedor: fondo blanco en lugar de crema */
 .disp-container {
   max-width: 800px;
   margin: 2rem auto;
-  background: #FFF5E1;
+  background: #fff;              /* antes #FFF5E1 */
   padding: 2rem;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   font-family: 'Arial', sans-serif;
+  color: #3D2314;
 }
+
+/* Header: mismo marrón pero con fuente Arial */
 .disp-header {
   background: #8a4221;
   color: #fff;
@@ -14,8 +18,12 @@
   border-radius: 6px;
   margin-bottom: 1.5rem;
   text-align: center;
-  font-family: 'Bangers', cursive;
+  font-family: 'Arial', sans-serif;  /* antes Bangers */
+  font-size: 1.5rem;
+  font-weight: bold;
 }
+
+/* Formulario de selección */
 .disp-form-group {
   display: flex;
   align-items: center;
@@ -31,6 +39,8 @@
   border: 1px solid #ccc;
   border-radius: 4px;
 }
+
+/* Tabla de disponibilidades: colores iguales a la planilla */
 .disp-table {
   width: 100%;
   border-collapse: collapse;
@@ -42,6 +52,45 @@
   padding: 0.6rem;
   text-align: center;
 }
+/* Cabecera amarillo claro */
+.disp-table th {
+  background: #fff3c7;
+  color: #3D2314;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+}
+/* Primera columna también en amarillo claro */
+.disp-table td:first-child {
+  background: #fff3c7;
+  color: #3D2314;
+  font-weight: bold;
+  text-align: left;
+}
+/* Celdas normales blancas */
+.disp-table td {
+  background: #ffffff;
+}
+/* Filas alternadas */
+.disp-table tbody tr:nth-child(odd) {
+  background-color: #FFF5E1;
+}
+.disp-table tbody tr:nth-child(even) {
+  background-color: #ffffff;
+}
+/* Hover para feedback */
+.disp-table tbody tr:hover {
+  background-color: #FFE0B2;
+}
+/* Inputs tipo time a toda la anchura */
+.disp-table input[type="time"] {
+  width: 100%;
+  padding: 0.25rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Botones */
 .disp-actions {
   text-align: right;
 }
