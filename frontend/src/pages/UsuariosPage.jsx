@@ -1,6 +1,9 @@
+// src/pages/UsuariosPage.jsx
+
 import React, { useEffect, useState } from 'react';
 import { getUsuarios, updateUsuario, eliminarUsuario } from '../api/usuarios';
 import NuevoUsuario from './NuevoUsuario';
+import './UsuariosPage.css';
 
 export default function UsuariosPage() {
   const [usuarios, setUsuarios] = useState([]);
@@ -12,6 +15,7 @@ export default function UsuariosPage() {
     horas_contrato: 45,
     puede_cerrar: false
   });
+  const [expandedId, setExpandedId] = useState(null);
 
   const fetchUsuarios = async () => {
     try {
@@ -73,19 +77,18 @@ export default function UsuariosPage() {
     }
   };
 
-  return (
-    <div style={{ padding: '2rem' }}>
-      <h2>Gestión de Crews</h2>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+  const toggleExpand = (id) => {
+    setExpandedId(prev => (prev === id ? null : id));
+  };
 
-      {/* Formulario de creación */}
+  return (
+    <div className="usuarios-page">
+      <h2>Gestión de Crews</h2>
+      {error && <p className="error">{error}</p>}
+
       <NuevoUsuario onNueva={fetchUsuarios} />
 
-      <table
-        border="1"
-        cellPadding="8"
-        style={{ borderCollapse: 'collapse', marginTop: '1rem', width: '100%' }}
-      >
+      <table className="usuarios-table">
         <thead>
           <tr>
             <th>ID</th>
@@ -94,79 +97,102 @@ export default function UsuariosPage() {
             <th>Horas Contrato</th>
             <th>Puede cerrar</th>
             <th>Acciones</th>
+            <th>Más información</th>
           </tr>
         </thead>
         <tbody>
           {usuarios.map(u => (
-            <tr key={u.id}>
-              <td>{u.id}</td>
+            <React.Fragment key={u.id}>
+              <tr>
+                <td>{u.id}</td>
+                <td>
+                  {editId === u.id
+                    ? <input name="nombre" value={editForm.nombre} onChange={handleEditChange} />
+                    : u.nombre
+                  }
+                </td>
+                <td>
+                  {editId === u.id
+                    ? <input type="email" name="correo" value={editForm.correo} onChange={handleEditChange} />
+                    : u.correo
+                  }
+                </td>
+                <td>
+                  {editId === u.id
+                    ? (
+                      <select
+                        name="horas_contrato"
+                        value={editForm.horas_contrato}
+                        onChange={handleEditChange}
+                      >
+                        <option value={45}>45</option>
+                        <option value={30}>30</option>
+                        <option value={20}>20</option>
+                        <option value={16}>16</option>
+                      </select>
+                    )
+                    : u.horas_contrato
+                  }
+                </td>
+                <td>
+                  {editId === u.id
+                    ? <input
+                        type="checkbox"
+                        name="puede_cerrar"
+                        checked={editForm.puede_cerrar}
+                        onChange={handleEditChange}
+                      />
+                    : (u.puede_cerrar ? 'Sí' : 'No')
+                  }
+                </td>
+                <td>
+                  {editId === u.id
+                    ? (
+                      <>
+                        <button onClick={() => handleEditSubmit(u.id)}>💾 Guardar</button>
+                        <button onClick={() => setEditId(null)} style={{ marginLeft: '0.5rem' }}>❌ Cancelar</button>
+                      </>
+                    )
+                    : (
+                      <>
+                        <button onClick={() => handleEditClick(u)}>✏️ Editar</button>
+                        <button onClick={() => handleDelete(u.id)} style={{ marginLeft: '0.5rem' }}>🗑️ Eliminar</button>
+                      </>
+                    )
+                  }
+                </td>
+                <td>
+                  <button onClick={() => toggleExpand(u.id)}>
+                    {expandedId === u.id ? '▲ Ocultar' : '▼ Ver más'}
+                  </button>
+                </td>
+              </tr>
 
-              {/* Nombre */}
-              <td>
-                {editId === u.id
-                  ? <input name="nombre" value={editForm.nombre} onChange={handleEditChange} />
-                  : u.nombre
-                }
-              </td>
-
-              {/* Correo */}
-              <td>
-                {editId === u.id
-                  ? <input type="email" name="correo" value={editForm.correo} onChange={handleEditChange} />
-                  : u.correo
-                }
-              </td>
-
-              {/* Horas contrato */}
-              <td>
-                {editId === u.id
-                  ? (
-                    <select
-                      name="horas_contrato"
-                      value={editForm.horas_contrato}
-                      onChange={handleEditChange}
-                    >
-                      <option value={45}>45</option>
-                      <option value={30}>30</option>
-                      <option value={20}>20</option>
-                      <option value={16}>16</option>
-                    </select>
-                  )
-                  : u.horas_contrato
-                }
-              </td>
-
-              {/* Puede cerrar */}
-              <td>
-                {editId === u.id
-                  ? <input
-                      type="checkbox"
-                      name="puede_cerrar"
-                      checked={editForm.puede_cerrar}
-                      onChange={handleEditChange}
-                    />
-                  : (u.puede_cerrar ? 'Sí' : 'No')
-                }
-              </td>
-
-              {/* Acciones */}
-              <td>
-                {editId === u.id
-                  ? (
-                    <>
-                      <button onClick={() => handleEditSubmit(u.id)}>💾 Guardar</button>
-                      <button onClick={() => setEditId(null)} style={{ marginLeft: '0.5rem' }}>❌ Cancelar</button>
-                    </>
-                  )
-                  : (
-                    <>
-                      <button onClick={() => handleEditClick(u)}>✏️ Editar</button>
-                      <button onClick={() => handleDelete(u.id)} style={{ marginLeft: '0.5rem' }}>🗑️ Eliminar</button>
-                    </>
-                  )
-                }
-              </td>
-            </tr>
+              {expandedId === u.id && (
+                <tr className="info-row">
+                  <td colSpan="7">
+                    <div className="info-panel">
+                      {/* Aquí va el layout base que mostraste */}
+                      <div className="info-photo">
+                        <div className="photo-placeholder">[Foto de perfil]</div>
+                        <button className="edit-photo-btn">Editar foto</button>
+                      </div>
+                      <div className="info-data">
+                        <h3>{u.nombre}</h3>
+                        <p><strong>Correo:</strong> {u.correo}</p>
+                        <p><strong>Horas contrato:</strong> {u.horas_contrato}</p>
+                        <p><strong>P. cierre:</strong> {u.puede_cerrar ? 'Sí' : 'No'}</p>
+                        {/* placeholder para tiempo en la empresa */}
+                        <p><strong>Tiempo en la empresa:</strong> -- días</p>
+                        {/* placeholder para stats de turnos */}
+                        <p><strong>Turnos de cierre:</strong> --</p>
+                        <p><strong>Turnos de apertura:</strong> --</p>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </React.Fragment>
           ))}
         </tbody>
       </table>

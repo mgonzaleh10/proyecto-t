@@ -1,0 +1,123 @@
+/* Contenedor principal */
+.usuarios-page {
+  padding: 2rem;
+  font-family: 'Arial', sans-serif;
+  color: #3D2314;
+}
+
+/* Título */
+.usuarios-page h2 {
+  margin-bottom: 1rem;
+}
+
+/* Mensaje de error */
+.usuarios-page .error {
+  color: #B71C1C;
+  margin-bottom: 1rem;
+}
+
+/* Tabla de usuarios */
+.usuarios-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  border: 1px solid #8a4221;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Filas y celdas */
+.usuarios-table th,
+.usuarios-table td {
+  border: 1px solid #3D2314;
+  padding: 8px;
+  text-align: center;
+}
+
+/* Encabezados */
+.usuarios-table th {
+  background: #8a4221;
+  color: #fff;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Primera columna (ID o Nombre) */
+.usuarios-table th:first-child,
+.usuarios-table td:first-child {
+  background: #fff3c7;
+  color: #3D2314;
+  font-weight: bold;
+  text-align: left;
+}
+
+/* Filas alternadas */
+.usuarios-table tbody tr:nth-child(odd) {
+  background-color: #FFF5E1;
+}
+.usuarios-table tbody tr:nth-child(even) {
+  background-color: #FFFFFF;
+}
+
+/* Hover sobre fila */
+.usuarios-table tbody tr:hover {
+  background-color: #FFE0B2;
+}
+
+/* Botones dentro de la tabla */
+.usuarios-table button {
+  padding: 4px 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Fila de “Más información” */
+.info-row td {
+  padding: 0;
+  border: none;
+}
+
+/* Panel interno de información */
+.info-panel {
+  display: flex;
+  background: #fff3c7;
+  border: 1px solid #3D2314;
+  padding: 1rem;
+}
+
+/* Foto de perfil */
+.info-photo {
+  margin-right: 1.5rem;
+  text-align: center;
+}
+.photo-placeholder {
+  width: 150px;
+  height: 150px;
+  background: #fff;
+  border: 2px solid #3D2314;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3D2314;
+  font-size: 0.9rem;
+}
+.edit-photo-btn {
+  margin-top: 0.5rem;
+  background: #FFC72C;
+  color: #3D2314;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+/* Datos del crew */
+.info-data h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+.info-data p {
+  margin: 0.25rem 0;
+}
