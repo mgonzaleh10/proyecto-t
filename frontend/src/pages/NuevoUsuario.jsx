@@ -1,17 +1,18 @@
-import React, { useState } from 'react'; // Importo React y useState
-import { crearUsuario } from '../api/usuarios'; // Importo función para crear usuario
+import React, { useState } from 'react';
+import { crearUsuario } from '../api/usuarios';
+import './NuevoUsuario.css';
 
 export default function NuevoUsuario({ onNueva }) {
-  // Defino estado del formulario con valores iniciales
+  // Estado del formulario
   const [form, setForm] = useState({
     nombre: '',
     correo: '',
     horas_contrato: 45,
     puede_cerrar: false
   });
-  const [error, setError] = useState(null); // Estado para mostrar errores
+  const [error, setError] = useState(null);
 
-  // Actualizo el estado del formulario al cambiar inputs
+  // Manejo cambios de inputs
   const handleChange = e => {
     const { name, value, type, checked } = e.target;
     setForm(prev => ({
@@ -20,98 +21,86 @@ export default function NuevoUsuario({ onNueva }) {
     }));
   };
 
-  // Manejo el envío del formulario
+  // Envía el formulario
   const handleSubmit = async e => {
     e.preventDefault();
     setError(null);
     try {
-      // Registro el nuevo usuario en el backend
       await crearUsuario({
         nombre: form.nombre,
         correo: form.correo,
         horas_contrato: form.horas_contrato,
         puede_cerrar: form.puede_cerrar,
-        contrasena: 'pass123' // Asigno contraseña por defecto
+        contrasena: 'pass123'
       });
-      // Reinicio el formulario
-      setForm({
-        nombre: '',
-        correo: '',
-        horas_contrato: 45,
-        puede_cerrar: false
-      });
-      onNueva(); // Notifico al padre que hay un nuevo usuario
+      setForm({ nombre: '', correo: '', horas_contrato: 45, puede_cerrar: false });
+      onNueva();
     } catch (err) {
       console.error(err);
-      setError('Error al crear usuario'); // Muestro error si falla
+      setError('Error al crear usuario');
     }
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      style={{ marginTop: '1rem', padding: '1rem', border: '1px solid #ccc' }}
-    >
-      <h3>Agregar nuevo Crew</h3>
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+    <form className="nuevo-crew-form" onSubmit={handleSubmit}>
+      <h3 className="nuevo-crew-title">Agregar nuevo Crew</h3>
+      {error && <div className="nuevo-crew-error">{error}</div>}
 
-      {/* Input de nombre */}
-      <div>
-        <label>Nombre:
-          <input
-            name="nombre"
-            value={form.nombre}
-            onChange={handleChange}
-            required
-          />
-        </label>
+      <div className="nuevo-crew-row">
+        <label htmlFor="nombre">Nombre:</label>
+        <input
+          id="nombre"
+          name="nombre"
+          value={form.nombre}
+          onChange={handleChange}
+          required
+        />
       </div>
 
-      {/* Input de correo */}
-      <div>
-        <label>Correo:
-          <input
-            type="email"
-            name="correo"
-            value={form.correo}
-            onChange={handleChange}
-            required
-          />
-        </label>
+      <div className="nuevo-crew-row">
+        <label htmlFor="correo">Correo:</label>
+        <input
+          id="correo"
+          type="email"
+          name="correo"
+          value={form.correo}
+          onChange={handleChange}
+          required
+        />
       </div>
 
-      {/* Select de horas de contrato */}
-      <div>
-        <label>Horas contrato:
-          <select
-            name="horas_contrato"
-            value={form.horas_contrato}
-            onChange={handleChange}
-          >
-            <option value={45}>45</option>
-            <option value={30}>30</option>
-            <option value={20}>20</option>
-            <option value={16}>16</option>
-          </select>
-        </label>
+      <div className="nuevo-crew-row">
+        <label htmlFor="horas_contrato">Horas contrato:</label>
+        <select
+          id="horas_contrato"
+          name="horas_contrato"
+          value={form.horas_contrato}
+          onChange={handleChange}
+        >
+          <option value={45}>45</option>
+          <option value={30}>30</option>
+          <option value={20}>20</option>
+          <option value={16}>16</option>
+        </select>
       </div>
 
-      {/* Checkbox de permiso para cerrar */}
-      <div>
+      <div className="nuevo-crew-row checkbox-row">
         <label>
           <input
             type="checkbox"
             name="puede_cerrar"
             checked={form.puede_cerrar}
             onChange={handleChange}
-          /> Puede cerrar
+          />
+          Puede cerrar
         </label>
       </div>
 
-      {/* Botón para crear nuevo crew */}
-      <button type="submit" style={{ marginTop: '0.5rem' }}>
-        ➕ Crear Crew
-      </button>
+      <div className="nuevo-crew-actions">
+        <button type="submit" className="btn-create-crew">
+          ➕ Crear Crew
+        </button>
+      </div>
     </form>
   );
 }
