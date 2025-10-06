@@ -10,6 +10,8 @@ import PlanillaTurnosManual from './pages/PlanillaTurnosManual'; // Importo la p
 import DisponibilidadesPage from './pages/DisponibilidadesPage'; // Importo la página de disponibilidades
 import BeneficiosPage from './pages/BeneficiosPage';
 import ResumenTurnosPage      from './pages/ResumenTurnosPage';
+import HorariosPage from './pages/HorariosPage'; // 👈 importa tu nueva página
+
 
 export default function App() {
   return (
@@ -25,6 +27,8 @@ export default function App() {
         <Link to="/disponibilidades">Disponibilidades</Link> {/* Enlace a Disponibilidades */}
         <Link to="/beneficios">Beneficios</Link>
         <Link to="/resumen" style={{ marginRight:'1rem' }}>📈 Resumen</Link>
+        <Link to="/horarios" style={{ marginRight: '1rem' }}>📅 Horarios</Link>
+
       </header>
 
       {/* Contenedor principal donde se renderizan las rutas */}
@@ -39,6 +43,8 @@ export default function App() {
           <Route path="/disponibilidades" element={<DisponibilidadesPage />} /> {/* Ruta para DisponibilidadesPage */}
           <Route path="/beneficios" element={<BeneficiosPage />} />
           <Route path="/resumen" element={<ResumenTurnosPage />} />
+          <Route path="/horarios" element={<HorariosPage />} />
+
 
           {/* Ruta comodín para mostrar mensaje 404 */}
           <Route
