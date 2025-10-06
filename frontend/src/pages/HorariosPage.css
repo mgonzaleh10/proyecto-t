@@ -1,0 +1,60 @@
+@import url('https://fonts.googleapis.com/css2?family=Bangers&display=swap');
+
+.schedule-container {
+  background: #fdf3e1; /* Beige claro */
+  min-height: 100vh;
+  padding: 2rem;
+  text-align: center;
+  position: relative;
+}
+
+/* Título */
+.schedule-title {
+  font-family: 'Bangers', cursive;
+  font-size: 4rem;
+  color: #b33300; /* Rojo oscuro Burger King */
+  margin-bottom: 1rem;
+  letter-spacing: 2px;
+}
+
+/* Tabla */
+.schedule-table {
+  margin: 0 auto;
+  border-collapse: collapse;
+  width: 90%;
+  font-family: Arial, sans-serif;
+  font-size: 1.1rem;
+}
+
+.schedule-table th {
+  background: #e66a00; /* Naranja fuerte */
+  color: white;
+  padding: 12px;
+  border: 2px solid #b33300;
+  text-transform: uppercase;
+}
+
+.schedule-table td {
+  border: 2px solid #b33300;
+  padding: 10px;
+  text-align: center;
+}
+
+.schedule-table tbody tr:nth-child(odd) {
+  background: #fff7e6; /* tono crema */
+}
+
+.schedule-table tbody tr:nth-child(even) {
+  background: #ffe0b2; /* naranja claro */
+}
+
+/* Logo en esquina inferior derecha */
+.schedule-logo {
+  position: absolute;
+  bottom: 20px;
+  right: 40px;
+}
+
+.schedule-logo img {
+  width: 300px;
+}
