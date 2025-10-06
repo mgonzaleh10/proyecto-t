@@ -11,6 +11,7 @@ import DisponibilidadesPage from './pages/DisponibilidadesPage'; // Importo la p
 import BeneficiosPage from './pages/BeneficiosPage';
 import ResumenTurnosPage      from './pages/ResumenTurnosPage';
 import HorariosPage from './pages/HorariosPage'; // 👈 importa tu nueva página
+import LicenciasPage from './pages/LicenciasPage';
 
 
 export default function App() {
@@ -28,6 +29,8 @@ export default function App() {
         <Link to="/beneficios">Beneficios</Link>
         <Link to="/resumen" style={{ marginRight:'1rem' }}>📈 Resumen</Link>
         <Link to="/horarios" style={{ marginRight: '1rem' }}>📅 Horarios</Link>
+        <Link to="/licencias" style={{ marginRight: '1rem' }}>Licencias</Link>
+
 
       </header>
 
@@ -44,6 +47,7 @@ export default function App() {
           <Route path="/beneficios" element={<BeneficiosPage />} />
           <Route path="/resumen" element={<ResumenTurnosPage />} />
           <Route path="/horarios" element={<HorariosPage />} />
+          <Route path="/licencias" element={<LicenciasPage />} />
 
 
           {/* Ruta comodín para mostrar mensaje 404 */}

@@ -1,0 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Bangers&display=swap');
+
+.lic-page {
+  background: #fdf3e1; /* Beige claro */
+  min-height: 100vh;
+  padding: 2rem;
+  text-align: center;
+  position: relative;
+}
+
+/* Título estilo Horarios */
+.lic-title {
+  font-family: 'Bangers', cursive;
+  font-size: 4rem;
+  color: #b33300; /* Rojo Burger King */
+  margin-bottom: 2rem;
+  letter-spacing: 2px;
+}
+
+/* Formulario */
+.lic-form {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.lic-form select,
+.lic-form input {
+  padding: 8px;
+  border: 2px solid #b33300;
+  border-radius: 4px;
+}
+
+.lic-form .btn-add {
+  background: #e66a00; /* Naranja fuerte */
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+/* Tabla estilo Burger King */
+.lic-table {
+  margin: 0 auto;
+  border-collapse: collapse;
+  width: 90%;
+  font-family: Arial, sans-serif;
+  font-size: 1.1rem;
+}
+
+.lic-table th {
+  background: #e66a00; /* Naranja */
+  color: white;
+  padding: 12px;
+  border: 2px solid #b33300;
+  text-transform: uppercase;
+}
+
+.lic-table td {
+  border: 2px solid #b33300;
+  padding: 10px;
+  text-align: center;
+}
+
+.lic-table tbody tr:nth-child(odd) {
+  background: #fff7e6;
+}
+
+.lic-table tbody tr:nth-child(even) {
+  background: #ffe0b2;
+}
+
+/* Botón eliminar */
+.btn-del {
+  background: #b33300;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
