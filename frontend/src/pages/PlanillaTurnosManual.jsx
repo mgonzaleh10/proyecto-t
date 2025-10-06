@@ -12,6 +12,7 @@ import {
 import { getUsuarios } from '../api/usuarios';               // Importo API de usuarios
 import { getDisponibilidades } from '../api/disponibilidades'; // Importo API de disponibilidades
 import { getBeneficios } from '../api/beneficios';           // Importo API de beneficios
+import { obtenerLicencias } from '../api/licencias';         // ✅ Importo API de licencias
 
 import './PlanillaTurnosManual.css'; // Importo estilos
 
@@ -53,6 +54,8 @@ export default function PlanillaTurnosManual() {
   const [disps,     setDisps]     = useState({});
   // Ahora benefits mapea usuario_id → { 'YYYY-MM-DD': tipo }
   const [benefits,  setBenefits]  = useState({});
+  // ✅ Licencias: usuario_id → { 'YYYY-MM-DD': true }
+  const [leaves,    setLeaves]    = useState({});
 
   // 1) Cargo crews
   useEffect(() => {
@@ -88,6 +91,25 @@ export default function PlanillaTurnosManual() {
           m[b.usuario_id][f] = b.tipo;  // 'cumpleaños', 'administrativo' o 'vacaciones'
         });
         setBenefits(m);
+      })
+      .catch(console.error);
+  }, []);
+
+  // ✅ 3.1) Cargo licencias (marco todas las fechas del rango)
+  useEffect(() => {
+    obtenerLicencias()
+      .then(list => {
+        const map = {};
+        list.forEach(l => {
+          const start = new Date(String(l.fecha_inicio).slice(0,10));
+          const end   = new Date(String(l.fecha_fin).slice(0,10));
+          for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const ymd = d.toISOString().slice(0,10);
+            map[l.usuario_id] = map[l.usuario_id] || {};
+            map[l.usuario_id][ymd] = true;
+          }
+        });
+        setLeaves(map);
       })
       .catch(console.error);
   }, []);
@@ -188,16 +210,22 @@ export default function PlanillaTurnosManual() {
 
   // 9) Guardar todos los cambios
   const saveAll = async () => {
-    // Validación local: bloqueo días con beneficio
+    // Validación local: bloqueo días con beneficio o licencia
     for (const crew of crews) {
       const row = cells[crew.id] || {};
       for (let i = 0; i < 7; i++) {
         const c     = row[i];
         const fecha = weekDates[i].toISOString().slice(0,10);
-        if (benefits[crew.id]?.[fecha]) {
-          // no toco ese día
-          continue;
+
+        // ✅ Bloqueo por licencia (igual que beneficio)
+        if (leaves[crew.id]?.[fecha]) {
+          continue; // día bloqueado por licencia
         }
+
+        if (benefits[crew.id]?.[fecha]) {
+          continue; // día bloqueado por beneficio
+        }
+
         // validación disponibilidad
         if (c && !c.free && c.inicio && c.fin) {
           const avail = disps[crew.id]?.[DAY_LABELS[i].toLowerCase()];
@@ -218,6 +246,9 @@ export default function PlanillaTurnosManual() {
       for (let i = 0; i < 7; i++) {
         const c     = row[i];
         const fecha = weekDates[i].toISOString().slice(0,10);
+
+        // ✅ salto días con licencia
+        if (leaves[crew.id]?.[fecha]) continue;
 
         // salto días con beneficio
         if (benefits[crew.id]?.[fecha]) continue;
@@ -351,12 +382,19 @@ export default function PlanillaTurnosManual() {
               <td className="first-col">{c.nombre} ({horasTrabajadas(c.id)}/{c.horas_contrato})</td>
               {weekDates.map((d, i) => {
                 const fecha = d.toISOString().slice(0,10);
+
+                // ✅ Licencia: bloquea y muestra etiqueta
+                if (leaves[c.id]?.[fecha]) {
+                  return <td key={i} className="benefit-licencia">LICENCIA</td>;
+                }
+
                 // 👉 Beneficio: muestra tipo y color adecuado
                 const tipo = benefits[c.id]?.[fecha];
                 if (tipo) {
                   return <td key={i} className={`benefit-${tipo}`}>{tipo}</td>;
                 }
-                // Si no hay beneficio, lógica normal
+
+                // Si no hay beneficio/licencia, lógica normal
                 const t     = cells[c.id]?.[i];
                 const avail = disps[c.id]?.[DAY_LABELS[i].toLowerCase()];
                 if (editing) {

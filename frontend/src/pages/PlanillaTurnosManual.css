@@ -257,3 +257,11 @@
 .input-table .btn-free:hover {
   opacity: 0.9;
 }
+
+.planilla-table .benefit-licencia {
+  background: #FFE0B2;  /* naranja claro */
+  color: #b33300;
+  font-weight: bold;
+  text-transform: uppercase;
+  text-align: center;
+}

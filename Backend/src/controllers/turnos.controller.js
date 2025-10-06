@@ -10,6 +10,7 @@ const {
 const { generarTurnosAutomaticamente } = require('../services/generadorHorarios');
 const { sugerirIntercambio } = require('../services/recomendacionesHorarios');
 const { sendMail } = require('../services/emailService');
+const { tieneLicenciaEnFecha } = require('../models/licencia.model');
 const pool = require('../config/db');
 
 // Helper para convertir "HH:MM" o "HH:MM:SS" a minutos
@@ -27,6 +28,23 @@ const registrarTurno = async (req, res) => {
     for (const t of turnos) {
       const { usuario_id, fecha, hora_inicio, hora_fin, creado_por } = t;
       if (!usuario_id || !fecha || !hora_inicio || !hora_fin || !creado_por) continue;
+
+      // ✅ (Nuevo) Bloqueo por licencia vigente en la fecha solicitada
+      try {
+        const enLicencia = await tieneLicenciaEnFecha(usuario_id, fecha);
+        if (enLicencia) {
+          resultados.push({
+            ok: false,
+            motivo: 'LICENCIA_ACTIVA',
+            mensaje: `No se puede asignar turno. Usuario ${usuario_id} con licencia el ${fecha}.`
+          });
+          continue; // saltamos este turno, seguimos con los demás
+        }
+      } catch (e) {
+        // Si hay un problema al consultar licencias, devolvemos 500 coherente
+        console.error('❌ Error verificando licencia:', e);
+        return res.status(500).json({ error: 'Error verificando licencia' });
+      }
 
       // 1) Día de la semana en minúsculas
       const [y, m, d] = fecha.split('-').map(Number);
@@ -157,6 +175,41 @@ const recomendarIntercambio = async (req, res) => {
 const actualizarTurno = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // ✅ (Nuevo) Verificación de licencia antes de actualizar
+    // Tomamos usuario_id/fecha del body si vienen; si no, del turno actual.
+    let { usuario_id, fecha } = req.body || {};
+    if (!usuario_id || !fecha) {
+      const q = await pool.query(
+        'SELECT usuario_id, fecha FROM turnos WHERE id = $1',
+        [id]
+      );
+      const row = q.rows[0];
+      if (row) {
+        if (!usuario_id) usuario_id = row.usuario_id;
+        if (!fecha) {
+          // normalizamos a 'YYYY-MM-DD'
+          const iso = row.fecha instanceof Date ? row.fecha.toISOString() : String(row.fecha);
+          fecha = iso.slice(0, 10);
+        }
+      }
+    }
+    if (usuario_id && fecha) {
+      try {
+        const enLicencia = await tieneLicenciaEnFecha(usuario_id, fecha);
+        if (enLicencia) {
+          return res.status(409).json({
+            ok: false,
+            motivo: 'LICENCIA_ACTIVA',
+            mensaje: `No se puede actualizar. Usuario ${usuario_id} con licencia el ${fecha}.`
+          });
+        }
+      } catch (e) {
+        console.error('❌ Error verificando licencia (update):', e);
+        return res.status(500).json({ error: 'Error verificando licencia' });
+        }
+    }
+
     const actualizado = await updateTurnoModel(id, req.body);
     res.json(actualizado);
   } catch (error) {

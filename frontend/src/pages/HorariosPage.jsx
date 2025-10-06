@@ -16,6 +16,7 @@ export default function HorariosPage() {
             <th>MIÉRCOLES</th>
             <th>JUEVES</th>
             <th>VIERNES</th>
+            <th>SABADO</th>
             <th>DOMINGO</th>
           </tr>
         </thead>
@@ -25,6 +26,7 @@ export default function HorariosPage() {
             <td>8:00–4:00</td>
             <td>9:00–3:00</td>
             <td>9:00–3:00</td>
+            <td>8:00–4:00</td>
             <td>8:00–4:00</td>
             <td>8:00–4:00</td>
             <td>8:00–4:00</td>

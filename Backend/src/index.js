@@ -6,6 +6,8 @@ const disponibilidadRoutes = require('./routes/disponibilidades.routes'); // Imp
 const usuariosRoutes      = require('./routes/usuarios.routes');        // Importo mis rutas de usuarios
 const beneficiosRoutes    = require('./routes/beneficios.routes');      // Importo mis rutas de beneficios
 const turnosRoutes        = require('./routes/turnos.routes');          // Importo mis rutas de turnos
+const licenciasRoutes     = require('./routes/licencias.routes');
+
 
 const db = require('./config/db'); // Importo la configuración de la BD
 
@@ -17,6 +19,7 @@ app.use('/usuarios', usuariosRoutes);           // Configuro ruta /usuarios
 app.use('/disponibilidades', disponibilidadRoutes); // Configuro ruta /disponibilidades
 app.use('/beneficios', beneficiosRoutes);       // Configuro ruta /beneficios
 app.use('/turnos', turnosRoutes);               // Configuro ruta /turnos
+app.use('/licencias', licenciasRoutes);
 
 const PORT = process.env.PORT || 3000; // Defino el puerto del servidor
 app.listen(PORT, async () => {
