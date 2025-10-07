@@ -7,7 +7,8 @@ import {
   eliminarTurno,
   getTurnosPorFecha,
   eliminarTodosTurnos,
-  enviarCalendario
+  enviarCalendario,
+  generarPython                     // ✅ Opción 5: ejecutar notebook desde el backend
 } from '../api/turnos';                                      // Importo API de turnos
 import { getUsuarios } from '../api/usuarios';               // Importo API de usuarios
 import { getDisponibilidades } from '../api/disponibilidades'; // Importo API de disponibilidades
@@ -340,6 +341,20 @@ export default function PlanillaTurnosManual() {
     }
   };
 
+  // ✅ 14) Generar con Notebook (Opción 5)
+  const handleGeneratePy = async () => {
+    const monday = weekDates[0].toISOString().slice(0,10); // lunes de la semana visible
+    if (!window.confirm(`¿Generar turnos con el notebook para la semana que inicia el ${monday}?`)) return;
+    try {
+      const r = await generarPython(monday);
+      alert(`Generado con notebook.\nSalida: ${r.out}\nTurnos insertados: ${r.detalle?.inserted || 0}`);
+      await loadData(); // refrescar planilla
+    } catch (e) {
+  console.error(e);
+  alert(e?.response?.data?.error || 'Error generando con notebook.');
+}
+  };
+
   return (
     <div className="planilla-container">
       <h2>Calendario Manual de Turnos</h2>
@@ -360,6 +375,10 @@ export default function PlanillaTurnosManual() {
             {editing ? 'Cancelar' : 'Editar'}
           </button>
           {editing && <button className="btn-save" onClick={saveAll} style={{marginLeft:'1rem'}}>Guardar Cambios</button>}
+          {/* ✅ Botón para disparar el generador Python */}
+          <button style={{ marginLeft:'1rem' }} onClick={handleGeneratePy}>
+            Generar (Notebook)
+          </button>
         </div>
         <div>
           <button onClick={handleClearTable} style={{marginRight:'1rem',background:'#c00',color:'#fff'}}>Limpiar tabla</button>

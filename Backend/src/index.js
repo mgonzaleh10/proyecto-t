@@ -20,6 +20,7 @@ app.use('/disponibilidades', disponibilidadRoutes); // Configuro ruta /disponibi
 app.use('/beneficios', beneficiosRoutes);       // Configuro ruta /beneficios
 app.use('/turnos', turnosRoutes);               // Configuro ruta /turnos
 app.use('/licencias', licenciasRoutes);
+app.use('/turnos', require('./routes/turnos.routes'));
 
 const PORT = process.env.PORT || 3000; // Defino el puerto del servidor
 app.listen(PORT, async () => {

@@ -49,3 +49,9 @@ export function updateTurno(id, body) {
 export function enviarCalendario(body) {
   return client.post('/turnos/enviar-correo', body);
 }
+
+
+export const generarPython = async (fechaInicio) => {
+  const res = await client.post('/turnos/generar-python', { fechaInicio });
+  return res.data;
+};

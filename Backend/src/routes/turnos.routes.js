@@ -17,6 +17,8 @@ const {
   resumenTurnos
 } = require('../controllers/turnos.controller');
 
+const { generateScheduleFromNotebook } = require('../services/autoScheduler');
+
 // 1️⃣ Registro uno o varios turnos
 router.post('/', registrarTurno);
 
@@ -62,5 +64,25 @@ router.delete('/:id', eliminarTurno);
 // 6️⃣ Elimino todos los turnos
 // DELETE /turnos
 router.delete('/', eliminarTodos);
+
+// POST /turnos/generar-python
+router.post('/generar-python', async (req, res) => {
+  try {
+    const { fechaInicio } = req.body;
+    if (!fechaInicio) return res.status(400).json({ error: 'falta fechaInicio' });
+
+    const r = await generateScheduleFromNotebook(fechaInicio);
+    res.json({
+      mensaje: 'Generado con notebook',
+      in: r.inPath,
+      out: r.outPath,
+      detalle: r.summary
+    });
+  } catch (e) {
+    console.error('❌ generar-python:', e);
+    res.status(500).json({ error: e.message || 'Error generando con notebook' }); // 👈 devuelve detalle
+  }
+});
+
 
 module.exports = router;
