@@ -1,15 +1,23 @@
 # node_modules en cualquier subcarpeta
 **/node_modules
 
-# archivos de entorno
+# archivos de entorno (root y backend)
 .env
 .env.*
 
-# build de React
-/frontend/build
-
-# logs, sistema
+# logs del sistema
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .DS_Store
+
+# build de React (lo maneja el frontend/.gitignore también)
+frontend/build
+
+# Backend - notebooks temporales y outputs
+Backend/python/runtime/
+Backend/python/out/
+Backend/python/*.executed.ipynb
+
+# Evitar subir .vscode/ si se usa configuración local
+.vscode/
