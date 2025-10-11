@@ -1,60 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Bangers&display=swap');
-
-.schedule-container {
-  background: #fdf3e1; /* Beige claro */
-  min-height: 100vh;
-  padding: 2rem;
-  text-align: center;
-  position: relative;
-}
-
-/* Título */
-.schedule-title {
-  font-family: 'Bangers', cursive;
-  font-size: 4rem;
-  color: #b33300; /* Rojo oscuro Burger King */
-  margin-bottom: 1rem;
-  letter-spacing: 2px;
-}
-
-/* Tabla */
-.schedule-table {
-  margin: 0 auto;
-  border-collapse: collapse;
-  width: 90%;
-  font-family: Arial, sans-serif;
-  font-size: 1.1rem;
-}
-
-.schedule-table th {
-  background: #e66a00; /* Naranja fuerte */
-  color: white;
-  padding: 12px;
-  border: 2px solid #b33300;
-  text-transform: uppercase;
-}
-
-.schedule-table td {
-  border: 2px solid #b33300;
-  padding: 10px;
-  text-align: center;
-}
-
-.schedule-table tbody tr:nth-child(odd) {
-  background: #fff7e6; /* tono crema */
-}
-
-.schedule-table tbody tr:nth-child(even) {
-  background: #ffe0b2; /* naranja claro */
-}
-
-/* Logo en esquina inferior derecha */
-.schedule-logo {
-  position: absolute;
-  bottom: 20px;
-  right: 40px;
-}
-
-.schedule-logo img {
-  width: 300px;
-}
+.bk-wrapper { padding: 24px; font-family: Arial, sans-serif; color: #3D2314; }
+.bk-header { display:flex; align-items:center; justify-content:center; gap:16px; margin-bottom:16px; }
+.bk-title { font-size: 56px; color:#A6361F; letter-spacing:2px; margin: 0; }
+.bk-logo { width:64px; height:64px; object-fit:contain; }
+.bk-toolbar { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+.bk-field { display:flex; align-items:center; gap:8px; }
+.bk-btn { padding:8px 14px; border:none; border-radius:8px; background:#8a4221; color:#fff; cursor:pointer; }
+.bk-btn:hover { opacity:.9; }
+.bk-btn-primary { background:#d04a02; }
+.bk-btn-success { background:#1f8a3a; }
+.bk-table-wrap { overflow:auto; }
+.bk-table { border-collapse: collapse; width:100%; background:#fff5e1; }
+.bk-table th, .bk-table td { border:1px solid #d04a02; padding:8px; text-align:center; }
+.bk-table .first-col { font-weight:600; background:#fce3c9; text-align:left; }
+.cell-flex { display:flex; align-items:center; gap:6px; justify-content:center; }

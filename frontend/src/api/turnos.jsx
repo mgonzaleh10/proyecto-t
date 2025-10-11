@@ -1,57 +1,28 @@
-import client from './client'; // Importo el cliente axios
+// src/api/turnos.jsx
+import client from './client.jsx';
 
-// Obtengo todos los turnos
-export function getTurnos() {
-  return client.get('/turnos');
-}
+// ===== CRUD turnos “clásico” =====
+export const getTurnos = () => client.get('/turnos');
+export const getTurnosPorFecha = (fecha) => client.get(`/turnos/fecha/${fecha}`);
+export const crearTurno = (payload) => client.post('/turnos', payload);
+export const updateTurno = (id, payload) => client.put(`/turnos/${id}`, payload);
+export const eliminarTurno = (id) => client.delete(`/turnos/${id}`);
+export const eliminarTodosTurnos = () => client.delete('/turnos');
 
-// Obtengo turnos de una fecha específica
-export function getTurnosPorFecha(fecha) {
-  return client.get(`/turnos/fecha/${fecha}`);
-}
+// ===== Integración Notebook / Excel =====
+export const generarPython = (fechaInicio) =>
+  client.post('/turnos/generar-python', { fechaInicio });
 
-// Obtengo turnos de un usuario por su ID
-export function getTurnosPorUsuario(id) {
-  return client.get(`/turnos/${id}`);
-}
+export const previewPython = (fechaInicio) =>
+  client.get('/turnos/preview-python', { params: { fechaInicio } });
 
-// Registro un nuevo turno
-export function crearTurno(body) {
-  return client.post('/turnos', body);
-}
+export const commitPython = (items) =>
+  client.post('/turnos/commit-python', { items });
 
-// Genero el horario automáticamente
-export function generarHorario(body) {
-  return client.post('/turnos/generar', body);
-}
+// ===== Otros =====
+export const enviarCalendario = (payload) =>
+  client.post('/turnos/enviar-correo', payload);
 
-// Solicito intercambio de turnos
-export function intercambio(body) {
-  return client.post('/turnos/intercambio', body);
-}
-
-// Elimino un turno por su ID
-export function eliminarTurno(id) {
-  return client.delete(`/turnos/${id}`);
-}
-
-// Elimino todos los turnos
-export function eliminarTodosTurnos() {
-  return client.delete('/turnos');
-}
-
-// Actualizo un turno existente
-export function updateTurno(id, body) {
-  return client.put(`/turnos/${id}`, body);
-}
-
-// Envío el calendario de turnos por correo
-export function enviarCalendario(body) {
-  return client.post('/turnos/enviar-correo', body);
-}
-
-
-export const generarPython = async (fechaInicio) => {
-  const res = await client.post('/turnos/generar-python', { fechaInicio });
-  return res.data;
-};
+// ===== Intercambio de turnos =====
+export const intercambio = (payload) =>
+  client.post('/turnos/intercambio', payload);
