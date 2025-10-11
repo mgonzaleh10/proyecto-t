@@ -26,6 +26,14 @@ function parseTime(hm) {
   return h * 60 + m;
 }
 
+// ✅ Formateador local "YYYY-MM-DD" (sin UTC)
+function fmtYMD(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 // Convierto "YYYY-MM-DD" a Date local
 function parseLocalDate(ymd) {
   const [y, m, d] = ymd.split('-').map(Number);
@@ -47,7 +55,7 @@ function getWeekDates(base) {
 
 export default function PlanillaTurnosManual() {
   // Estados
-  const [baseDate,  setBaseDate]  = useState(new Date().toISOString().slice(0,10));
+  const [baseDate,  setBaseDate]  = useState(fmtYMD(new Date()));
   const [weekDates, setWeekDates] = useState(getWeekDates(baseDate));
   const [crews,     setCrews]     = useState([]);
   const [cells,     setCells]     = useState({});
@@ -72,8 +80,8 @@ export default function PlanillaTurnosManual() {
           const dia = d.dia_semana.toLowerCase();
           m[d.usuario_id] = m[d.usuario_id] || {};
           m[d.usuario_id][dia] = {
-            inicio: d.hora_inicio.slice(0,5),
-            fin:    d.hora_fin.slice(0,5)
+            inicio: String(d.hora_inicio).slice(0,5),
+            fin:    String(d.hora_fin).slice(0,5)
           };
         });
         setDisps(m);
@@ -87,7 +95,7 @@ export default function PlanillaTurnosManual() {
       .then(r => {
         const m = {};
         r.data.forEach(b => {
-          const f = b.fecha.slice(0,10);
+          const f = String(b.fecha).slice(0,10);
           m[b.usuario_id] = m[b.usuario_id] || {};
           m[b.usuario_id][f] = b.tipo;  // 'cumpleaños', 'administrativo' o 'vacaciones'
         });
@@ -102,10 +110,10 @@ export default function PlanillaTurnosManual() {
       .then(list => {
         const map = {};
         list.forEach(l => {
-          const start = new Date(String(l.fecha_inicio).slice(0,10));
-          const end   = new Date(String(l.fecha_fin).slice(0,10));
+          const start = parseLocalDate(String(l.fecha_inicio).slice(0,10));
+          const end   = parseLocalDate(String(l.fecha_fin).slice(0,10));
           for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            const ymd = d.toISOString().slice(0,10);
+            const ymd = fmtYMD(d);
             map[l.usuario_id] = map[l.usuario_id] || {};
             map[l.usuario_id][ymd] = true;
           }
@@ -124,7 +132,7 @@ export default function PlanillaTurnosManual() {
   const loadData = useCallback(async () => {
     const all = [];
     for (const d of weekDates) {
-      const fecha = d.toISOString().slice(0,10);
+      const fecha = fmtYMD(d); // ✅ local
       try {
         const r = await getTurnosPorFecha(fecha);
         all.push(...r.data);
@@ -132,13 +140,14 @@ export default function PlanillaTurnosManual() {
     }
     const m = {};
     all.forEach(t => {
-      const idx = weekDates.findIndex(dd => dd.toISOString().slice(0,10) === t.fecha.slice(0,10));
+      const tFecha = String(t.fecha).slice(0,10);
+      const idx = weekDates.findIndex(dd => fmtYMD(dd) === tFecha); // ✅ local
       if (idx >= 0) {
         m[t.usuario_id] = m[t.usuario_id] || {};
         m[t.usuario_id][idx] = {
           id:     t.id,
-          inicio: t.hora_inicio.slice(0,5),
-          fin:    t.hora_fin.slice(0,5),
+          inicio: String(t.hora_inicio).slice(0,5),
+          fin:    String(t.hora_fin).slice(0,5),
           free:   false
         };
       }
@@ -147,10 +156,10 @@ export default function PlanillaTurnosManual() {
     const store = JSON.parse(localStorage.getItem(FREE_KEY) || '{}');
     Object.entries(store).forEach(([uid, fechas]) => {
       fechas.forEach(f => {
-        const idx = weekDates.findIndex(dd => dd.toISOString().slice(0,10) === f);
+        const idx = weekDates.findIndex(dd => fmtYMD(dd) === f); // ✅ local
         if (idx >= 0) {
           m[uid] = m[uid] || {};
-          m[uid][idx] = { free: true };
+          m[uid][idx] = { ...(m[uid][idx]||{}), free: true };
         }
       });
     });
@@ -170,7 +179,7 @@ export default function PlanillaTurnosManual() {
         free: !prev[crewId]?.[dayIdx]?.free
       };
       // Actualizo localStorage
-      const fecha = weekDates[dayIdx].toISOString().slice(0,10);
+      const fecha = fmtYMD(weekDates[dayIdx]); // ✅ local
       const store = JSON.parse(localStorage.getItem(FREE_KEY) || '{}');
       const setFechas = new Set(store[crewId] || []);
       if (next[crewId][dayIdx].free) setFechas.add(fecha);
@@ -216,7 +225,7 @@ export default function PlanillaTurnosManual() {
       const row = cells[crew.id] || {};
       for (let i = 0; i < 7; i++) {
         const c     = row[i];
-        const fecha = weekDates[i].toISOString().slice(0,10);
+        const fecha = fmtYMD(weekDates[i]); // ✅ local
 
         // ✅ Bloqueo por licencia (igual que beneficio)
         if (leaves[crew.id]?.[fecha]) {
@@ -246,7 +255,7 @@ export default function PlanillaTurnosManual() {
       const row = cells[crew.id] || {};
       for (let i = 0; i < 7; i++) {
         const c     = row[i];
-        const fecha = weekDates[i].toISOString().slice(0,10);
+        const fecha = fmtYMD(weekDates[i]); // ✅ local
 
         // ✅ salto días con licencia
         if (leaves[crew.id]?.[fecha]) continue;
@@ -343,16 +352,17 @@ export default function PlanillaTurnosManual() {
 
   // ✅ 14) Generar con Notebook (Opción 5)
   const handleGeneratePy = async () => {
-    const monday = weekDates[0].toISOString().slice(0,10); // lunes de la semana visible
+    const monday = fmtYMD(weekDates[0]); // ✅ lunes local de la semana visible
     if (!window.confirm(`¿Generar turnos con el notebook para la semana que inicia el ${monday}?`)) return;
     try {
       const r = await generarPython(monday);
       alert(`Generado con notebook.\nSalida: ${r.out}\nTurnos insertados: ${r.detalle?.inserted || 0}`);
       await loadData(); // refrescar planilla
+      setEditing(false);
     } catch (e) {
-  console.error(e);
-  alert(e?.response?.data?.error || 'Error generando con notebook.');
-}
+      console.error(e);
+      alert(e?.response?.data?.error || 'Error generando con notebook.');
+    }
   };
 
   return (
@@ -400,7 +410,7 @@ export default function PlanillaTurnosManual() {
             <tr key={c.id}>
               <td className="first-col">{c.nombre} ({horasTrabajadas(c.id)}/{c.horas_contrato})</td>
               {weekDates.map((d, i) => {
-                const fecha = d.toISOString().slice(0,10);
+                const fecha = fmtYMD(d); // ✅ local
 
                 // ✅ Licencia: bloquea y muestra etiqueta
                 if (leaves[c.id]?.[fecha]) {
