@@ -1,4 +1,3 @@
-// src/pages/HorariosPage.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { generarPython, previewPython, commitPython } from '../api/turnos';
 import { getUsuarios } from '../api/usuarios';
@@ -9,17 +8,30 @@ function mondayOf(d){ const dow=d.getDay(); const diff=(dow===0?-6:1-dow); retur
 function fmtYMD(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
 function human(d){ return d.toLocaleDateString(); }
 
+const LS_KEY_MAP = 'horarios.map';
+const LS_KEY_MON = 'horarios.monday';
+
 export default function HorariosPage(){
-  // Lunes visible SIEMPRE: si el usuario elige miércoles, se normaliza a ese lunes
-  const [monday,setMonday]=useState(()=>fmtYMD(mondayOf(new Date())));
+  const initialMonday = (() => {
+    const ls = localStorage.getItem(LS_KEY_MON);
+    return ls || fmtYMD(mondayOf(new Date()));
+  })();
+
+  const [monday,setMonday]=useState(initialMonday);
   const [usuarios,setUsuarios]=useState([]);
-  const [scheduleMap,setScheduleMap]=useState({}); // { uid: { ymd: {inicio, fin} } }
+  const [scheduleMap,setScheduleMap]=useState(()=>{
+    try{ return JSON.parse(localStorage.getItem(LS_KEY_MAP)||'{}'); }catch{ return {}; }
+  });
   const [loading,setLoading]=useState(false);
 
   const days = useMemo(()=>{
-    const b = parseYMDLocal(monday);
+    const b=parseYMDLocal(monday);
     return Array.from({length:7},(_,i)=> addDaysLocal(b,i));
   },[monday]);
+
+  // Persistencia en localStorage
+  useEffect(()=>{ localStorage.setItem(LS_KEY_MON, monday); },[monday]);
+  useEffect(()=>{ localStorage.setItem(LS_KEY_MAP, JSON.stringify(scheduleMap)); },[scheduleMap]);
 
   useEffect(()=>{ (async()=>{
     try{ const { data } = await getUsuarios(); setUsuarios(data||[]); }
@@ -27,16 +39,15 @@ export default function HorariosPage(){
   })(); },[]);
 
   const handleDateChange = (val) => {
-    // normaliza SIEMPRE a LUNES
-    const mon = mondayOf(parseYMDLocal(val));
-    setMonday(fmtYMD(mon));
+    const mon = fmtYMD(mondayOf(parseYMDLocal(val)));
+    setMonday(mon);
   };
 
   const handleGenerate=async()=>{
     try{
       setLoading(true);
-      await generarPython(monday); // guarda meta para el archivo generado
-      await loadPreview();         // une todas las semanas disponibles
+      await generarPython(monday);
+      await loadPreview();
       alert('Preview cargado desde el Excel generado. Puedes editar y guardar.');
     }catch(e){
       console.error(e);
@@ -44,15 +55,15 @@ export default function HorariosPage(){
     }finally{ setLoading(false); }
   };
 
+  // Carga TODAS las semanas (todas las hojas / archivos); usa monday como hint para la 1ª
   const loadPreview=async()=>{
     try{
-      // Enviamos Monday solo como "hint" para el primer archivo sin meta
       const { data } = await previewPython(monday);
       const items = Array.isArray(data) ? data : (data?.items || []);
       if(!items.length){ alert('No hay filas en los Excel de salida.'); return; }
 
       const next={};
-      let minDate = null;
+      let minDate=null;
       for(const it of items){
         const uid = Number(it.usuario_id);
         const fecha = String(it.fecha).slice(0,10);
@@ -62,15 +73,11 @@ export default function HorariosPage(){
         if(!next[uid]) next[uid]={};
         next[uid][fecha] = { inicio, fin };
 
-        const d = parseYMDLocal(fecha);
+        const d=parseYMDLocal(fecha);
         if(!minDate || d<minDate) minDate=d;
       }
       setScheduleMap(next);
-
-      // Auto-ajusta cabecera al mínimo lunes presente en TODOS los archivos
-      if(minDate){
-        setMonday(fmtYMD(mondayOf(minDate)));
-      }
+      if(minDate) setMonday(fmtYMD(mondayOf(minDate)));
     }catch(e){
       console.error(e);
       alert(e?.response?.data?.error || e.message || 'Error cargando preview');
@@ -101,7 +108,7 @@ export default function HorariosPage(){
     setScheduleMap(prev=>{
       const next={...prev};
       if(!next[uid]) next[uid]={};
-      next[uid][ymd] = { ...(next[uid][ymd]||{}), [field]:value };
+      next[uid][ymd]={ ...(next[uid][ymd]||{}), [field]:value };
       return next;
     });
   };
