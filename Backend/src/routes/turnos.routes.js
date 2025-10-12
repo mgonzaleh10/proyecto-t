@@ -1,4 +1,3 @@
-// Backend/src/routes/turnos.routes.js
 const { Router } = require('express');
 const {
   registrarTurno,
