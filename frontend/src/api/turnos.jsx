@@ -13,6 +13,7 @@ export const eliminarTodosTurnos = () => client.delete('/turnos');
 export const generarPython = (fechaInicio) =>
   client.post('/turnos/generar-python', { fechaInicio });
 
+// ⬅️ IMPORTANTE: pasamos fechaInicio para anclar la matriz 1..7
 export const previewPython = (fechaInicio) =>
   client.get('/turnos/preview-python', { params: { fechaInicio } });
 
