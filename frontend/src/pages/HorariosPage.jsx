@@ -3,35 +3,17 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { generarPython, previewPython, commitPython } from '../api/turnos';
 import { getUsuarios } from '../api/usuarios';
 
-function parseYMDLocal(ymd){
-  const [y,m,d]=String(ymd).split('-').map(Number);
-  return new Date(y,(m||1)-1,d||1);
-}
-function addDaysLocal(d,n){
-  const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());
-  x.setDate(x.getDate()+n);
-  return x;
-}
-function fmtYMD(d){
-  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
-  return `${y}-${m}-${day}`;
-}
-function human(d){
-  return d.toLocaleDateString();
-}
+function parseYMDLocal(ymd){ const [y,m,d]=String(ymd).split('-').map(Number); return new Date(y,(m||1)-1,(d||1)); }
+function addDaysLocal(d,n){ const x=new Date(d.getFullYear(),d.getMonth(),d.getDate()); x.setDate(x.getDate()+n); return x; }
+function mondayOf(d){ const dow=d.getDay(); const diff=(dow===0?-6:1-dow); return addDaysLocal(d,diff); }
+function fmtYMD(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+function human(d){ return d.toLocaleDateString(); }
 
 export default function HorariosPage(){
-  // lunes visible
-  const [monday,setMonday]=useState(()=>{
-    const today = new Date();
-    const dow = today.getDay(); // 0=Dom, 1=Lun
-    const diff = (dow===0 ? -6 : 1-dow);
-    const mon  = addDaysLocal(today, diff);
-    return fmtYMD(mon);
-  });
-
+  // Lunes visible SIEMPRE: si el usuario elige miércoles, se normaliza a ese lunes
+  const [monday,setMonday]=useState(()=>fmtYMD(mondayOf(new Date())));
   const [usuarios,setUsuarios]=useState([]);
-  const [scheduleMap,setScheduleMap]=useState({});
+  const [scheduleMap,setScheduleMap]=useState({}); // { uid: { ymd: {inicio, fin} } }
   const [loading,setLoading]=useState(false);
 
   const days = useMemo(()=>{
@@ -39,56 +21,56 @@ export default function HorariosPage(){
     return Array.from({length:7},(_,i)=> addDaysLocal(b,i));
   },[monday]);
 
-  useEffect(()=>{
-    (async()=>{
-      try{
-        const { data } = await getUsuarios();
-        setUsuarios(data || []);
-      }catch(e){
-        console.error(e);
-        alert('No se pudieron cargar los usuarios');
-      }
-    })();
-  },[]);
+  useEffect(()=>{ (async()=>{
+    try{ const { data } = await getUsuarios(); setUsuarios(data||[]); }
+    catch(e){ console.error(e); alert('No se pudieron cargar los usuarios'); }
+  })(); },[]);
 
-  const ensureUserDay=(map,uid,ymd)=>{
-    if(!map[uid]) map[uid]={};
-    if(!map[uid][ymd]) map[uid][ymd]={ inicio:'', fin:'' };
+  const handleDateChange = (val) => {
+    // normaliza SIEMPRE a LUNES
+    const mon = mondayOf(parseYMDLocal(val));
+    setMonday(fmtYMD(mon));
   };
 
   const handleGenerate=async()=>{
     try{
       setLoading(true);
-      await generarPython(monday);
-      await loadPreview();
+      await generarPython(monday); // guarda meta para el archivo generado
+      await loadPreview();         // une todas las semanas disponibles
       alert('Preview cargado desde el Excel generado. Puedes editar y guardar.');
     }catch(e){
       console.error(e);
       alert(e?.response?.data?.error || e.message || 'Error generando horario');
-    }finally{
-      setLoading(false);
-    }
+    }finally{ setLoading(false); }
   };
 
   const loadPreview=async()=>{
     try{
+      // Enviamos Monday solo como "hint" para el primer archivo sin meta
       const { data } = await previewPython(monday);
       const items = Array.isArray(data) ? data : (data?.items || []);
-      if(!items.length){
-        alert('No hay filas en el Excel (o no coinciden con esta semana).');
-        return;
-      }
+      if(!items.length){ alert('No hay filas en los Excel de salida.'); return; }
+
       const next={};
+      let minDate = null;
       for(const it of items){
         const uid = Number(it.usuario_id);
         const fecha = String(it.fecha).slice(0,10);
         const inicio = String(it.hora_inicio||'').slice(0,5);
         const fin    = String(it.hora_fin||'').slice(0,5);
         if(!uid || !fecha || !inicio || !fin) continue;
-        if(!next[uid]) next[uid] = {};
+        if(!next[uid]) next[uid]={};
         next[uid][fecha] = { inicio, fin };
+
+        const d = parseYMDLocal(fecha);
+        if(!minDate || d<minDate) minDate=d;
       }
       setScheduleMap(next);
+
+      // Auto-ajusta cabecera al mínimo lunes presente en TODOS los archivos
+      if(minDate){
+        setMonday(fmtYMD(mondayOf(minDate)));
+      }
     }catch(e){
       console.error(e);
       alert(e?.response?.data?.error || e.message || 'Error cargando preview');
@@ -102,12 +84,7 @@ export default function HorariosPage(){
         for(const ymd of Object.keys(scheduleMap[uid])){
           const cell=scheduleMap[uid][ymd]||{};
           if(cell.inicio && cell.fin){
-            items.push({
-              usuario_id:Number(uid),
-              fecha:ymd,
-              hora_inicio:cell.inicio,
-              hora_fin:cell.fin,
-            });
+            items.push({ usuario_id:Number(uid), fecha:ymd, hora_inicio:cell.inicio, hora_fin:cell.fin });
           }
         }
       }
@@ -124,7 +101,7 @@ export default function HorariosPage(){
     setScheduleMap(prev=>{
       const next={...prev};
       if(!next[uid]) next[uid]={};
-      next[uid][ymd]={ ...(next[uid][ymd]||{}), [field]:value };
+      next[uid][ymd] = { ...(next[uid][ymd]||{}), [field]:value };
       return next;
     });
   };
@@ -136,7 +113,7 @@ export default function HorariosPage(){
       <div style={{ display:'flex', gap:'0.75rem', alignItems:'center', marginBottom:'1rem' }}>
         <label>
           Semana que inicia (lunes):{' '}
-          <input type="date" value={monday} onChange={e=>setMonday(e.target.value)} />
+          <input type="date" value={monday} onChange={(e)=>handleDateChange(e.target.value)} />
         </label>
 
         <button onClick={handleGenerate} disabled={loading}
@@ -159,9 +136,7 @@ export default function HorariosPage(){
         <thead>
           <tr>
             <th style={th}>Crew / Día</th>
-            {days.map(d => (
-              <th key={+d} style={th}>{human(d)}</th>
-            ))}
+            {days.map(d => <th key={+d} style={th}>{human(d)}</th>)}
           </tr>
         </thead>
         <tbody>
