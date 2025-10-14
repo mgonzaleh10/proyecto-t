@@ -1,120 +1,163 @@
-/* Contenedor: fondo blanco en lugar de crema */
-.disp-container {
-  max-width: 800px;
-  margin: 2rem auto;
-  background: #fff;              /* antes #FFF5E1 */
-  padding: 2rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  font-family: 'Arial', sans-serif;
-  color: #3D2314;
+/* ====== Tema Burger King para Disponibilidades ====== */
+.disp-page {
+  --bk-bg: #fff5e1;
+  --bk-card: #fff;
+  --bk-brown-900: #6a2e1f;
+  --bk-brown-700: #8a4221;
+  --bk-brown-600: #9b4b25;
+  --bk-brown-500: #b85c2d;
+  --bk-brown-300: #cf8a5d;
+  --bk-brown-200: #e5c39b;
+  --bk-brown-100: #ffeeda;
+  --bk-accent: #2e7d32;
+  --bk-danger: #c0392b;
+
+  min-height: 100%;
+  background: var(--bk-bg);
+  padding: 16px;
+  color: #3a2a22;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  box-sizing: border-box;
 }
 
-/* Header: mismo marrón pero con fuente Arial */
-.disp-header {
-  background: #8a4221;
-  color: #fff;
-  padding: 1rem;
-  border-radius: 6px;
-  margin-bottom: 1.5rem;
-  text-align: center;
-  font-family: 'Arial', sans-serif;  /* antes Bangers */
-  font-size: 1.5rem;
-  font-weight: bold;
-}
-
-/* Formulario de selección */
-.disp-form-group {
+/* Toolbar / Título */
+.disp-toolbar {
   display: flex;
   align-items: center;
-  margin-bottom: 1rem;
+  gap: 12px;
+  margin: 4px 0 14px;
 }
-.disp-form-group label {
-  margin-right: 0.5rem;
-  font-weight: bold;
-}
-.disp-select {
-  flex: 1;
-  padding: 0.6rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+.disp-toolbar h2 {
+  margin: 0;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  color: var(--bk-brown-700);
 }
 
-/* Tabla de disponibilidades: colores iguales a la planilla */
+/* Card contenedora */
+.disp-card {
+  background: var(--bk-card);
+  border: 1px solid var(--bk-brown-200);
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.10);
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+/* Controles (selector) */
+.disp-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+.disp-controls .fi { display: flex; flex-direction: column; gap: 4px; }
+.disp-controls label {
+  font-size: 12px;
+  color: var(--bk-brown-700);
+  font-weight: 700;
+}
+.disp-controls select {
+  background: #fff;
+  border: 1px solid var(--bk-brown-200);
+  border-radius: 9px;
+  padding: 8px 10px;
+  min-height: 36px;
+  outline: none;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.disp-controls select:focus {
+  border-color: var(--bk-brown-300);
+  box-shadow: 0 0 0 3px rgba(184,92,45,.15);
+}
+
+/* Tabla */
 .disp-table {
   width: 100%;
   border-collapse: collapse;
-  margin-bottom: 1rem;
+  border: 1px solid var(--bk-brown-200);
 }
-.disp-table th,
-.disp-table td {
-  border: 1px solid #ccc;
-  padding: 0.6rem;
-  text-align: center;
-}
-/* Cabecera amarillo claro */
-.disp-table th {
-  background: #fff3c7;
-  color: #3D2314;
-  font-weight: bold;
+.disp-table thead th {
+  background: var(--bk-brown-500);
+  color: #fff;
+  padding: 10px;
+  font-weight: 800;
   text-transform: uppercase;
-  font-size: 0.9rem;
-}
-/* Primera columna también en amarillo claro */
-.disp-table td:first-child {
-  background: #fff3c7;
-  color: #3D2314;
-  font-weight: bold;
+  letter-spacing: .3px;
+  border-right: 1px solid rgba(255,255,255,.25);
   text-align: left;
 }
-/* Celdas normales blancas */
-.disp-table td {
-  background: #ffffff;
+.disp-table thead th:last-child { border-right: none; }
+
+.disp-table tbody td {
+  background: #fffdf8;
+  padding: 10px;
+  border-right: 1px solid var(--bk-brown-200);
+  border-top: 1px solid var(--bk-brown-200);
+  vertical-align: middle;
 }
-/* Filas alternadas */
-.disp-table tbody tr:nth-child(odd) {
-  background-color: #FFF5E1;
-}
-.disp-table tbody tr:nth-child(even) {
-  background-color: #ffffff;
-}
-/* Hover para feedback */
-.disp-table tbody tr:hover {
-  background-color: #FFE0B2;
-}
-/* Inputs tipo time a toda la anchura */
+.disp-table tbody tr:nth-child(odd) td { background: #fff9ef; }
+.disp-table tbody td:last-child { border-right: none; }
+.col-day { font-weight: 700; color: var(--bk-brown-700); }
+
+/* Inputs de hora */
 .disp-table input[type="time"] {
-  width: 100%;
-  padding: 0.25rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  width: 120px;
+  background: #fff;
+  border: 1px solid var(--bk-brown-200);
+  border-radius: 8px;
+  padding: 6px 8px;
+  outline: none;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.disp-table input[type="time"]:focus {
+  border-color: var(--bk-brown-300);
+  box-shadow: 0 0 0 3px rgba(184,92,45,.15);
 }
 
-/* Botones */
+/* Acciones */
 .disp-actions {
-  text-align: right;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 12px;
 }
-.btn-primary {
-  background: #FFD200;
-  color: #000;
-  padding: 0.6rem 1.2rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-}
-.btn-danger {
-  background: #E31C1C;
+.btn {
+  background: var(--bk-brown-500);
   color: #fff;
-  padding: 0.6rem 1.2rem;
   border: none;
-  border-radius: 4px;
+  border-radius: 9px;
+  padding: 8px 14px;
+  font-weight: 800;
   cursor: pointer;
-  margin-left: 1rem;
+  transition: transform .05s ease, filter .15s ease;
 }
-.btn-primary:hover {
-  background: #e6c000;
-}
-.btn-danger:hover {
-  background: #c11212;
+.btn:hover { filter: brightness(1.05); }
+.btn:active { transform: translateY(1px); }
+
+.btn-primary { background: var(--bk-brown-500); }
+.btn-danger  { background: var(--bk-danger); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .disp-table thead { display: none; }
+  .disp-table, .disp-table tbody, .disp-table tr, .disp-table td { display: block; width: 100%; }
+  .disp-table tr { margin-bottom: 10px; border: 1px solid var(--bk-brown-200); border-radius: 10px; overflow: hidden; }
+  .disp-table tbody td {
+    border: none;
+    border-top: 1px solid var(--bk-brown-200);
+    display: grid;
+    grid-template-columns: 40% 60%;
+    gap: 8px;
+  }
+  .disp-table tbody td::before {
+    content: attr(data-label);
+    font-weight: 800;
+    color: var(--bk-brown-700);
+    padding-right: 8px;
+  }
+  .disp-table input[type="time"] { width: 100%; }
+  .disp-actions { justify-content: stretch; }
+  .btn { width: 100%; }
 }

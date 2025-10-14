@@ -1,77 +1,79 @@
+/* ====== Formulario de nuevo Crew (tema BK) ====== */
 .nuevo-crew-form {
-  max-width: 600px;
-  margin: 2rem auto;
-  padding: 1.5rem;
-  background: #FFF5E1;
-  border: 1px solid #8a4221;     /* Marrón BK */
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-  font-family: 'Arial', sans-serif;
-  color: #3D2314;
+  border: 1px solid var(--bk-brown-200);
+  border-radius: 14px;
+  background: #fff;
+  padding: 14px;
 }
 
-.nuevo-crew-title {
-  margin: 0 0 1rem;
-  font-size: 1.3rem;
-  color: #8a4221;
-  border-bottom: 1px solid #8a4221;
-  padding-bottom: 0.5rem;
+.form-head h3 {
+  margin: 0 0 10px;
+  color: var(--bk-brown-700);
+  font-weight: 900;
+  letter-spacing: .2px;
 }
 
 .nuevo-crew-error {
-  background: #ffcdd2;
-  color: #b71c1c;
-  padding: 0.5rem;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  font-weight: bold;
+  background: #ffe6e3;
+  border: 1px solid #ffb3a8;
+  color: #9d2b1f;
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
 }
 
-.nuevo-crew-row {
-  display: flex;
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 10px;
+}
+.fi { display: flex; flex-direction: column; gap: 6px; }
+.fi label {
+  font-size: 12px;
+  color: var(--bk-brown-700);
+  font-weight: 700;
+}
+.fi input, .fi select {
+  background: #fff;
+  border: 1px solid var(--bk-brown-200);
+  border-radius: 9px;
+  padding: 8px 10px;
+  outline: none;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.fi input:focus, .fi select:focus {
+  border-color: var(--bk-brown-300);
+  box-shadow: 0 0 0 3px rgba(184,92,45,.15);
+}
+
+.checkbox-row .chk {
+  display: inline-flex;
   align-items: center;
-  margin-bottom: 1rem;
-}
-
-.nuevo-crew-row label {
-  flex: 0 0 140px;
-  font-weight: bold;
-}
-
-.nuevo-crew-row input,
-.nuevo-crew-row select {
-  flex: 1;
-  padding: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1rem;
-}
-
-.checkbox-row {
-  justify-content: flex-start;
-}
-
-.checkbox-row label {
-  font-weight: normal;
+  gap: 6px;
+  height: 100%;
 }
 
 .nuevo-crew-actions {
-  text-align: left;
-  margin-top: 1.5rem;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
 }
-
 .btn-create-crew {
-  background: #702c0d;
+  background: var(--bk-brown-500);
   color: #fff;
   border: none;
-  border-radius: 4px;
-  padding: 0.6rem 1.2rem;
-  font-size: 1rem;
-  font-weight: bold;
+  border-radius: 9px;
+  padding: 10px 14px;
+  font-weight: 800;
   cursor: pointer;
-  transition: opacity .2s;
+  transition: transform .05s ease, filter .15s ease;
 }
+.btn-create-crew:hover { filter: brightness(1.05); }
+.btn-create-crew:active { transform: translateY(1px); }
 
-.btn-create-crew:hover {
-  opacity: 0.9;
+@media (max-width: 900px) {
+  .form-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 560px) {
+  .form-grid { grid-template-columns: 1fr; }
 }
