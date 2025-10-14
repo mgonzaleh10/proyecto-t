@@ -1,5 +1,4 @@
 // src/pages/UsuariosPage.jsx
-
 import React, { useEffect, useState } from 'react';
 import { getUsuarios, updateUsuario, eliminarUsuario } from '../api/usuarios';
 import NuevoUsuario from './NuevoUsuario';
@@ -83,119 +82,147 @@ export default function UsuariosPage() {
 
   return (
     <div className="usuarios-page">
-      <h2>Gestión de Crews</h2>
-      {error && <p className="error">{error}</p>}
+      <div className="usuarios-toolbar">
+        <h2>Crews</h2>
+      </div>
 
-      <NuevoUsuario onNueva={fetchUsuarios} />
+      {error && <div className="alert-error">{error}</div>}
 
-      <table className="usuarios-table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Nombre</th>
-            <th>Correo</th>
-            <th>Horas Contrato</th>
-            <th>Puede cerrar</th>
-            <th>Acciones</th>
-            <th>Más información</th>
-          </tr>
-        </thead>
-        <tbody>
-          {usuarios.map(u => (
-            <React.Fragment key={u.id}>
-              <tr>
-                <td>{u.id}</td>
-                <td>
-                  {editId === u.id
-                    ? <input name="nombre" value={editForm.nombre} onChange={handleEditChange} />
-                    : u.nombre
-                  }
-                </td>
-                <td>
-                  {editId === u.id
-                    ? <input type="email" name="correo" value={editForm.correo} onChange={handleEditChange} />
-                    : u.correo
-                  }
-                </td>
-                <td>
-                  {editId === u.id
-                    ? (
-                      <select
-                        name="horas_contrato"
-                        value={editForm.horas_contrato}
-                        onChange={handleEditChange}
-                      >
-                        <option value={45}>45</option>
-                        <option value={30}>30</option>
-                        <option value={20}>20</option>
-                        <option value={16}>16</option>
-                      </select>
-                    )
-                    : u.horas_contrato
-                  }
-                </td>
-                <td>
-                  {editId === u.id
-                    ? <input
-                        type="checkbox"
-                        name="puede_cerrar"
-                        checked={editForm.puede_cerrar}
-                        onChange={handleEditChange}
-                      />
-                    : (u.puede_cerrar ? 'Sí' : 'No')
-                  }
-                </td>
-                <td>
-                  {editId === u.id
-                    ? (
-                      <>
-                        <button onClick={() => handleEditSubmit(u.id)}>💾 Guardar</button>
-                        <button onClick={() => setEditId(null)} style={{ marginLeft: '0.5rem' }}>❌ Cancelar</button>
-                      </>
-                    )
-                    : (
-                      <>
-                        <button onClick={() => handleEditClick(u)}>✏️ Editar</button>
-                        <button onClick={() => handleDelete(u.id)} style={{ marginLeft: '0.5rem' }}>🗑️ Eliminar</button>
-                      </>
-                    )
-                  }
-                </td>
-                <td>
-                  <button onClick={() => toggleExpand(u.id)}>
-                    {expandedId === u.id ? '▲ Ocultar' : '▼ Ver más'}
-                  </button>
-                </td>
-              </tr>
+      <div className="usuarios-card">
+        <NuevoUsuario onNueva={fetchUsuarios} />
+      </div>
 
-              {expandedId === u.id && (
-                <tr className="info-row">
-                  <td colSpan="7">
-                    <div className="info-panel">
-                      {/* Aquí va el layout base que mostraste */}
-                      <div className="info-photo">
-                        <div className="photo-placeholder">[Foto de perfil]</div>
-                        <button className="edit-photo-btn">Editar foto</button>
-                      </div>
-                      <div className="info-data">
-                        <h3>{u.nombre}</h3>
-                        <p><strong>Correo:</strong> {u.correo}</p>
-                        <p><strong>Horas contrato:</strong> {u.horas_contrato}</p>
-                        <p><strong>P. cierre:</strong> {u.puede_cerrar ? 'Sí' : 'No'}</p>
-                        {/* placeholder para tiempo en la empresa */}
-                        <p><strong>Tiempo en la empresa:</strong> -- días</p>
-                        {/* placeholder para stats de turnos */}
-                        <p><strong>Turnos de cierre:</strong> --</p>
-                        <p><strong>Turnos de apertura:</strong> --</p>
-                      </div>
-                    </div>
+      <div className="usuarios-card">
+        <table className="usuarios-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Correo</th>
+              <th>Horas Contrato</th>
+              <th>Puede cerrar</th>
+              <th>Acciones</th>
+              <th>Más</th>
+            </tr>
+          </thead>
+          <tbody>
+            {usuarios.map(u => (
+              <React.Fragment key={u.id}>
+                <tr>
+                  <td data-label="ID">{u.id}</td>
+                  <td data-label="Nombre">
+                    {editId === u.id
+                      ? <input className="in" name="nombre" value={editForm.nombre} onChange={handleEditChange} />
+                      : <strong>{u.nombre}</strong>
+                    }
+                  </td>
+                  <td data-label="Correo">
+                    {editId === u.id
+                      ? <input className="in" type="email" name="correo" value={editForm.correo} onChange={handleEditChange} />
+                      : u.correo
+                    }
+                  </td>
+                  <td data-label="Horas">
+                    {editId === u.id
+                      ? (
+                        <select
+                          className="in"
+                          name="horas_contrato"
+                          value={editForm.horas_contrato}
+                          onChange={handleEditChange}
+                        >
+                          <option value={45}>45</option>
+                          <option value={30}>30</option>
+                          <option value={20}>20</option>
+                          <option value={16}>16</option>
+                        </select>
+                      )
+                      : u.horas_contrato
+                    }
+                  </td>
+                  <td data-label="Cierre">
+                    {editId === u.id
+                      ? (
+                        <label className="chk">
+                          <input
+                            type="checkbox"
+                            name="puede_cerrar"
+                            checked={editForm.puede_cerrar}
+                            onChange={handleEditChange}
+                          />
+                          <span>Puede cerrar</span>
+                        </label>
+                      )
+                      : (u.puede_cerrar ? <span className="badge-ok">Sí</span> : <span className="badge-warn">No</span>)
+                    }
+                  </td>
+                  <td data-label="Acciones">
+                    {editId === u.id
+                      ? (
+                        <div className="row-actions">
+                          <button className="btn btn-primary" onClick={() => handleEditSubmit(u.id)}>💾 Guardar</button>
+                          <button className="btn btn-secondary" onClick={() => setEditId(null)}>❌ Cancelar</button>
+                        </div>
+                      )
+                      : (
+                        <div className="row-actions">
+                          <button className="btn btn-outline" onClick={() => handleEditClick(u)}>✏️ Editar</button>
+                          <button className="btn btn-danger" onClick={() => handleDelete(u.id)}>🗑️ Eliminar</button>
+                        </div>
+                      )
+                    }
+                  </td>
+                  <td data-label="Más">
+                    <button className="btn btn-chip" onClick={() => toggleExpand(u.id)}>
+                      {expandedId === u.id ? '▲ Ocultar' : '▼ Ver más'}
+                    </button>
                   </td>
                 </tr>
-              )}
-            </React.Fragment>
-          ))}
-        </tbody>
-      </table>
+
+                {expandedId === u.id && (
+                  <tr className="info-row">
+                    <td colSpan="7">
+                      <div className="info-panel">
+                        <div className="info-photo">
+                          <div className="photo-placeholder">[Foto de perfil]</div>
+                          <button className="btn btn-outline small">Editar foto</button>
+                        </div>
+                        <div className="info-data">
+                          <h3>{u.nombre}</h3>
+                          <div className="kv">
+                            <span>Correo</span>
+                            <strong>{u.correo}</strong>
+                          </div>
+                          <div className="kv">
+                            <span>Horas contrato</span>
+                            <strong>{u.horas_contrato}</strong>
+                          </div>
+                          <div className="kv">
+                            <span>Puede cerrar</span>
+                            <strong>{u.puede_cerrar ? 'Sí' : 'No'}</strong>
+                          </div>
+                          <div className="kv">
+                            <span>Tiempo en la empresa</span>
+                            <strong>—</strong>
+                          </div>
+                          <div className="kv">
+                            <span>Turnos de cierre</span>
+                            <strong>—</strong>
+                          </div>
+                          <div className="kv">
+                            <span>Turnos de apertura</span>
+                            <strong>—</strong>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

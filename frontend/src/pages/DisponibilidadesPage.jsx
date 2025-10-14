@@ -141,27 +141,33 @@ export default function DisponibilidadesPage() {
   };
 
   return (
-    <div className="disp-container">
-      <header className="disp-header">
-        <h3>Configuración de Disponibilidades</h3>
-      </header>
-
-      <div className="disp-form-group">
-        <label>Elige un crew:</label>
-        <select
-          value={selectedCrew}
-          onChange={e => setSelectedCrew(e.target.value)}
-          className="disp-select"
-        >
-          <option value="">-- Seleccionar --</option>
-          {crews.map(u => (
-            <option key={u.id} value={u.id}>{u.nombre}</option>
-          ))}
-        </select>
+    <div className="disp-page">
+      {/* Título / Barra superior */}
+      <div className="disp-toolbar">
+        <h2>Disponibilidades</h2>
       </div>
 
+      {/* Selector de Crew */}
+      <div className="disp-card">
+        <div className="disp-controls">
+          <div className="fi">
+            <label>Elige un crew</label>
+            <select
+              value={selectedCrew}
+              onChange={e => setSelectedCrew(e.target.value)}
+            >
+              <option value="">— Seleccionar —</option>
+              {crews.map(u => (
+                <option key={u.id} value={u.id}>{u.nombre}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Cuadro de edición por días */}
       {selectedCrew && (
-        <>
+        <div className="disp-card">
           <table className="disp-table">
             <thead>
               <tr>
@@ -173,15 +179,15 @@ export default function DisponibilidadesPage() {
             <tbody>
               {DAY_LABELS.map(dia => (
                 <tr key={dia}>
-                  <td>{dia}</td>
-                  <td>
+                  <td data-label="Día" className="col-day">{dia}</td>
+                  <td data-label="Inicio">
                     <input
                       type="time"
                       value={inputs[dia]?.inicio || ''}
                       onChange={e => handleChange(dia, 'inicio', e.target.value)}
                     />
                   </td>
-                  <td>
+                  <td data-label="Fin">
                     <input
                       type="time"
                       value={inputs[dia]?.fin || ''}
@@ -194,15 +200,15 @@ export default function DisponibilidadesPage() {
           </table>
 
           <div className="disp-actions">
-            <button className="btn-primary" onClick={handleSave}>
-              Guardar Disponibilidades
+            <button className="btn btn-primary" onClick={handleSave}>
+              Guardar disponibilidades
             </button>
-            <button className="btn-danger" onClick={handleClearAll}>
-              Eliminar Todas
+            <button className="btn btn-danger" onClick={handleClearAll}>
+              Eliminar todas
             </button>
           </div>
-        </>
+        </div>
       )}
     </div>
-);
+  );
 }

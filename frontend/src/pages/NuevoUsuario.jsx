@@ -3,7 +3,6 @@ import { crearUsuario } from '../api/usuarios';
 import './NuevoUsuario.css';
 
 export default function NuevoUsuario({ onNueva }) {
-  // Estado del formulario
   const [form, setForm] = useState({
     nombre: '',
     correo: '',
@@ -12,7 +11,6 @@ export default function NuevoUsuario({ onNueva }) {
   });
   const [error, setError] = useState(null);
 
-  // Manejo cambios de inputs
   const handleChange = e => {
     const { name, value, type, checked } = e.target;
     setForm(prev => ({
@@ -21,7 +19,6 @@ export default function NuevoUsuario({ onNueva }) {
     }));
   };
 
-  // Envía el formulario
   const handleSubmit = async e => {
     e.preventDefault();
     setError(null);
@@ -34,7 +31,7 @@ export default function NuevoUsuario({ onNueva }) {
         contrasena: 'pass123'
       });
       setForm({ nombre: '', correo: '', horas_contrato: 45, puede_cerrar: false });
-      onNueva();
+      onNueva && onNueva();
     } catch (err) {
       console.error(err);
       setError('Error al crear usuario');
@@ -43,63 +40,66 @@ export default function NuevoUsuario({ onNueva }) {
 
   return (
     <form className="nuevo-crew-form" onSubmit={handleSubmit}>
-      <h3 className="nuevo-crew-title">Agregar nuevo Crew</h3>
+      <div className="form-head">
+        <h3>Agregar nuevo Crew</h3>
+      </div>
+
       {error && <div className="nuevo-crew-error">{error}</div>}
 
-      <div className="nuevo-crew-row">
-        <label htmlFor="nombre">Nombre:</label>
-        <input
-          id="nombre"
-          name="nombre"
-          value={form.nombre}
-          onChange={handleChange}
-          required
-        />
-      </div>
-
-      <div className="nuevo-crew-row">
-        <label htmlFor="correo">Correo:</label>
-        <input
-          id="correo"
-          type="email"
-          name="correo"
-          value={form.correo}
-          onChange={handleChange}
-          required
-        />
-      </div>
-
-      <div className="nuevo-crew-row">
-        <label htmlFor="horas_contrato">Horas contrato:</label>
-        <select
-          id="horas_contrato"
-          name="horas_contrato"
-          value={form.horas_contrato}
-          onChange={handleChange}
-        >
-          <option value={45}>45</option>
-          <option value={30}>30</option>
-          <option value={20}>20</option>
-          <option value={16}>16</option>
-        </select>
-      </div>
-
-      <div className="nuevo-crew-row checkbox-row">
-        <label>
+      <div className="form-grid">
+        <div className="fi">
+          <label htmlFor="nombre">Nombre</label>
           <input
-            type="checkbox"
-            name="puede_cerrar"
-            checked={form.puede_cerrar}
+            id="nombre"
+            name="nombre"
+            value={form.nombre}
             onChange={handleChange}
+            required
           />
-          Puede cerrar
-        </label>
+        </div>
+
+        <div className="fi">
+          <label htmlFor="correo">Correo</label>
+          <input
+            id="correo"
+            type="email"
+            name="correo"
+            value={form.correo}
+            onChange={handleChange}
+            required
+          />
+        </div>
+
+        <div className="fi">
+          <label htmlFor="horas_contrato">Horas contrato</label>
+          <select
+            id="horas_contrato"
+            name="horas_contrato"
+            value={form.horas_contrato}
+            onChange={handleChange}
+          >
+            <option value={45}>45</option>
+            <option value={30}>30</option>
+            <option value={20}>20</option>
+            <option value={16}>16</option>
+          </select>
+        </div>
+
+        <div className="fi checkbox-row">
+          <label className="chk">
+            <input
+              type="checkbox"
+              name="puede_cerrar"
+              checked={form.puede_cerrar}
+              onChange={handleChange}
+            />
+            <span>Puede cerrar</span>
+          </label>
+        </div>
       </div>
 
       <div className="nuevo-crew-actions">
-        <button type="submit" className="btn-create-crew">
-          ➕ Crear Crew
-        </button>
+        <button type="submit" className="btn-create-crew">➕ Crear Crew</button>
       </div>
     </form>
   );
