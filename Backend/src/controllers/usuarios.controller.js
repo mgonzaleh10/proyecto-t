@@ -5,6 +5,9 @@ const {
   actualizarUsuario   // importo el nuevo método
 } = require('../models/usuario.model'); // Importo funciones del modelo de usuarios
 
+// ⬇️ Importo el servicio de sincronización con Excel (hoja "Trabajador")
+const { syncTrabajadoresSheet } = require('../services/excelSync');
+
 const crearUsuario = async (req, res) => {
   // Desestructuro datos del body
   let {
@@ -53,6 +56,12 @@ const crearUsuario = async (req, res) => {
       horas_contrato,
       puede_cerrar
     });
+
+    // 🔄 Sincronizo Excel (hoja "Trabajador") en background
+    //    No bloqueo la respuesta; si falla, solo registro en logs.
+    syncTrabajadoresSheet()
+      .catch(err => console.error('Excel sync (crear) falló:', err));
+
     // Devuelvo el usuario creado con estado 201
     res.status(201).json(usuario);
   } catch (error) {
@@ -84,6 +93,11 @@ const eliminarUsuario = async (req, res) => {
     if (!eliminado) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
+
+    // 🔄 Sincronizo Excel luego de eliminar
+    syncTrabajadoresSheet()
+      .catch(err => console.error('Excel sync (delete) falló:', err));
+
     // Devuelvo mensaje de eliminación exitosa
     res.json({ mensaje: 'Usuario eliminado', usuario: eliminado });
   } catch (error) {
@@ -93,7 +107,7 @@ const eliminarUsuario = async (req, res) => {
   }
 };
 
-// Nuevo: PUT /usuarios/:id
+// PUT /usuarios/:id
 const editarUsuario = async (req, res) => {
   const { id } = req.params;
   let {
@@ -143,6 +157,11 @@ const editarUsuario = async (req, res) => {
     if (!usuario) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
+
+    // 🔄 Sincronizo Excel luego de actualizar
+    syncTrabajadoresSheet()
+      .catch(err => console.error('Excel sync (update) falló:', err));
+
     res.json(usuario);
   } catch (error) {
     console.error('❌ Error al editar usuario:', error);
@@ -155,4 +174,4 @@ module.exports = {
   listarUsuarios,
   eliminarUsuario,
   editarUsuario   // exporto el nuevo controlador
-}; // Exporto los controladores de usuarios
+};
