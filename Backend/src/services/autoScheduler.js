@@ -251,10 +251,10 @@ async function commitItemsToDb(items){
     const { usuario_id, fecha, hora_inicio, hora_fin } = it || {};
     if(!usuario_id || !fecha || !hora_inicio || !hora_fin) continue;
     await db.query(
-      `INSERT INTO turnos (usuario_id, fecha, hora_inicio, hora_fin, creado_por, observaciones)
-       VALUES ($1,$2,$3,$4,$5,$6)
+      `INSERT INTO turnos (usuario_id, fecha, hora_inicio, hora_fin, observaciones)
+       VALUES ($1,$2,$3,$4,$5)
        ON CONFLICT DO NOTHING`,
-      [usuario_id, fecha, hora_inicio, hora_fin, 19, 'importado de notebook']
+      [usuario_id, fecha, hora_inicio, hora_fin, 'importado de notebook']
     );
     inserted++;
   }

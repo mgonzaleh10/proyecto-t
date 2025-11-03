@@ -7,6 +7,7 @@ const {
 
 // ⬇️ Importo el servicio de sincronización con Excel (hoja "Trabajador")
 const { syncTrabajadoresSheet } = require('../services/excelSync');
+const { syncDisponibilidadesSheet } = require('../services/excelDisponibilidades');
 
 const crearUsuario = async (req, res) => {
   // Desestructuro datos del body
@@ -84,25 +85,26 @@ const listarUsuarios = async (_req, res) => {
 };
 
 const eliminarUsuario = async (req, res) => {
-  // Obtengo id del usuario desde params
   const { id } = req.params;
   try {
-    // Elimino el usuario por su ID
     const eliminado = await eliminarUsuarioPorId(id);
-    // Compruebo si efectivamente existía
+
     if (!eliminado) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    // 🔄 Sincronizo Excel luego de eliminar
+    // 🔄 Sincronizo Excel (tabla principal)
     syncTrabajadoresSheet()
       .catch(err => console.error('Excel sync (delete) falló:', err));
 
-    // Devuelvo mensaje de eliminación exitosa
+    // 🧹 NUEVO: sincronizo disponibilidades también
+    // Esto limpiará automáticamente H:I y K:N de IDs que ya no existen en BD
+    syncDisponibilidadesSheet()
+      .catch(err => console.error('Excel disponibilidades sync (delete user) falló:', err));
+
     res.json({ mensaje: 'Usuario eliminado', usuario: eliminado });
   } catch (error) {
     console.error('❌ Error al eliminar usuario:', error);
-    // Devuelvo error de servidor
     res.status(500).json({ error: 'Error del servidor' });
   }
 };
