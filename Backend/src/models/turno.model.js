@@ -1,11 +1,11 @@
 const pool = require('../config/db');
 
-const crearTurno = async ({ usuario_id, fecha, hora_inicio, hora_fin, creado_por, observaciones }) => {
+const crearTurno = async ({ usuario_id, fecha, hora_inicio, hora_fin, observaciones }) => {
   // Inserto un nuevo turno en la tabla turnos
-  const q = `INSERT INTO turnos (usuario_id, fecha, hora_inicio, hora_fin, creado_por, observaciones)
-             VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`;
+  const q = `INSERT INTO turnos (usuario_id, fecha, hora_inicio, hora_fin, observaciones)
+             VALUES ($1,$2,$3,$4,$5) RETURNING *`;
   // Preparo los valores para la inserción
-  const vals = [usuario_id, fecha, hora_inicio, hora_fin, creado_por, observaciones];
+  const vals = [usuario_id, fecha, hora_inicio, hora_fin, observaciones];
   // Ejecuto la consulta y obtengo el turno creado
   const res = await pool.query(q, vals);
   // Devuelvo el objeto turno
@@ -39,14 +39,14 @@ const obtenerTurnosPorFecha = async (fecha) => {
   return res.rows;
 };
 
-const updateTurno = async (id, { fecha, hora_inicio, hora_fin, creado_por, observaciones }) => {
+const updateTurno = async (id, { fecha, hora_inicio, hora_fin, observaciones }) => {
   // Actualizo los campos del turno especificado por ID
   const q = `UPDATE turnos
-             SET fecha=$1, hora_inicio=$2, hora_fin=$3, creado_por=$4, observaciones=$5
-             WHERE id=$6
+             SET fecha=$1, hora_inicio=$2, hora_fin=$3, observaciones=$4
+             WHERE id=$5
              RETURNING *`;
   // Preparo los valores para la actualización
-  const vals = [fecha, hora_inicio, hora_fin, creado_por, observaciones, id];
+  const vals = [fecha, hora_inicio, hora_fin, observaciones, id];
   // Ejecuto la actualización y recupero el turno modificado
   const res = await pool.query(q, vals);
   // Devuelvo el turno actualizado

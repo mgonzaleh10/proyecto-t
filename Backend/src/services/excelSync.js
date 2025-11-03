@@ -19,16 +19,14 @@ function tipoFromHoras(h) {
 
 /**
  * Sincroniza SOLO A2:E... en la hoja "Trabajador" con los usuarios de BD,
- * excluyendo al usuario con id=19 (admin).
  */
 async function syncTrabajadoresSheet() {
   if (!EXCEL_PATH) throw new Error('EXCEL_TRABAJADORES_PATH/INPUT_EXCEL_PATH no definido');
 
-  // 1️⃣ Traer usuarios desde la BD (excluyendo al admin con id 19)
+  // 1️⃣ Traer usuarios desde la BD
   const { rows: usuarios } = await pool.query(
     `SELECT id, nombre, horas_contrato, puede_cerrar 
      FROM usuarios 
-     WHERE id <> 19
      ORDER BY id`
   );
 

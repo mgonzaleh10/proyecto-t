@@ -26,8 +26,8 @@ const registrarTurno = async (req, res) => {
     const resultados = [];
 
     for (const t of turnos) {
-      const { usuario_id, fecha, hora_inicio, hora_fin, creado_por } = t;
-      if (!usuario_id || !fecha || !hora_inicio || !hora_fin || !creado_por) continue;
+      const { usuario_id, fecha, hora_inicio, hora_fin } = t;
+      if (!usuario_id || !fecha || !hora_inicio || !hora_fin) continue;
 
       // ✅ (Nuevo) Bloqueo por licencia vigente en la fecha solicitada
       try {
