@@ -92,7 +92,7 @@ export default function DisponibilidadesPage() {
       }
     }
 
-    // 2) Detectar sólo-nuevos (sin id)
+    // 2) Nuevos (sin id)
     Object.entries(inputs).forEach(([dia_semana, v]) => {
       if (v.inicio && v.fin && !v.id) {
         toCreate.push({
@@ -104,13 +104,13 @@ export default function DisponibilidadesPage() {
       }
     });
 
-    // 3) Ejecutar eliminaciones
+    // 3) Eliminaciones
     for (let id of toDelete) {
       try { await eliminarDisponibilidad(id); }
       catch (e) { console.error('Error borrando:', e); }
     }
 
-    // 4) Ejecutar creaciones
+    // 4) Creaciones
     if (toCreate.length > 0) {
       try {
         await crearDisponibilidad(toCreate);
@@ -142,9 +142,10 @@ export default function DisponibilidadesPage() {
 
   return (
     <div className="disp-page">
-      {/* Título / Barra superior */}
-      <div className="disp-toolbar">
-        <h2>Disponibilidades</h2>
+      {/* Header / Título */}
+      <div className="disp-hero">
+        <h1 className="disp-title">DISPONIBILIDADES</h1>
+        <p className="disp-sub">Define ventanas de trabajo por día para cada crew</p>
       </div>
 
       {/* Selector de Crew */}
@@ -179,7 +180,9 @@ export default function DisponibilidadesPage() {
             <tbody>
               {DAY_LABELS.map(dia => (
                 <tr key={dia}>
-                  <td data-label="Día" className="col-day">{dia}</td>
+                  <td data-label="Día" className="col-day">
+                    <span className="day-pill">{dia}</span>
+                  </td>
                   <td data-label="Inicio">
                     <input
                       type="time"
@@ -201,10 +204,10 @@ export default function DisponibilidadesPage() {
 
           <div className="disp-actions">
             <button className="btn btn-primary" onClick={handleSave}>
-              Guardar disponibilidades
+              💾 Guardar disponibilidades
             </button>
             <button className="btn btn-danger" onClick={handleClearAll}>
-              Eliminar todas
+              🗑️ Eliminar todas
             </button>
           </div>
         </div>
