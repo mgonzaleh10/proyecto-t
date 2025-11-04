@@ -8,7 +8,7 @@ import {
   eliminarBeneficio
 } from '../api/beneficios';
 
-import './BeneficiosPage.css'; // estilos Burger King para Beneficios
+import './BeneficiosPage.css';
 
 export default function BeneficiosPage() {
   const [usuarios, setUsuarios] = useState([]);
@@ -46,12 +46,12 @@ export default function BeneficiosPage() {
     load();
   }, [load]);
 
-  // Helpers: filter by type
+  // Helpers
   const byType = tipo => beneficios.filter(b => b.tipo === tipo);
   const usedAdminCount = byType('administrativo').length;
   const usedVacDays = byType('vacaciones').map(b => b.fecha).sort();
 
-  // Shared submit for cumpleaños & administrativo & vacaciones
+  // CRUD helpers
   const handleCrear = async ({ tipo, fecha, descripcion }) => {
     await crearBeneficio({ id_usuario: +selectedUser, tipo, fecha, descripcion });
     load();
@@ -71,18 +71,22 @@ export default function BeneficiosPage() {
 
   return (
     <div className="beneficios-page">
-      {/* Toolbar */}
-      <div className="beneficios-toolbar">
-        <h2>Beneficios</h2>
-        <Link to="/usuarios">
-          <button className="btn btn-secondary">← Volver a Crews</button>
+      {/* Encabezado afiche */}
+      <div className="beneficios-hero">
+        <div className="hero-left">
+          <h1>BENEFICIOS</h1>
+          <p className="hero-sub">Cumpleaños • Administrativos • Vacaciones</p>
+          <span className="hero-underline" />
+        </div>
+        <Link to="/usuarios" className="link-reset">
+          <button className="btn btn-secondary btn-back">← Volver a Crews</button>
         </Link>
       </div>
 
       {/* Selector de usuario */}
       <div className="beneficios-card">
         <div className="beneficios-controls">
-          <div>
+          <div className="fi">
             <label>Selecciona Crew</label>
             <select
               value={selectedUser || ''}
@@ -103,7 +107,7 @@ export default function BeneficiosPage() {
           {/* Cumpleaños */}
           <section className="beneficios-card">
             <div className="section-head">
-              <h3>Cumpleaños</h3>
+              <h3><span className="s-icon">🎂</span> Cumpleaños</h3>
             </div>
 
             {byType('cumpleaños').map(b => (
@@ -183,7 +187,7 @@ export default function BeneficiosPage() {
           {/* Días administrativos */}
           <section className="beneficios-card">
             <div className="section-head">
-              <h3>Días Administrativos <span className="pill">{usedAdminCount}/2</span></h3>
+              <h3><span className="s-icon">🗂️</span> Días Administrativos <span className="pill">{usedAdminCount}/2</span></h3>
             </div>
 
             {[0, 1].map(slot => {
@@ -285,7 +289,7 @@ export default function BeneficiosPage() {
           {/* Vacaciones */}
           <section className="beneficios-card">
             <div className="section-head">
-              <h3>Vacaciones <span className="pill">{usedVacDays.length} días</span></h3>
+              <h3><span className="s-icon">🏖️</span> Vacaciones <span className="pill">{usedVacDays.length} días</span></h3>
             </div>
 
             <ul className="vac-list">

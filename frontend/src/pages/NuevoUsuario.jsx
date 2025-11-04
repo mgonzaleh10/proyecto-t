@@ -30,7 +30,12 @@ export default function NuevoUsuario({ onNueva }) {
         puede_cerrar: form.puede_cerrar,
         contrasena: 'pass123'
       });
-      setForm({ nombre: '', correo: '', horas_contrato: 45, puede_cerrar: false });
+      setForm({
+        nombre: '',
+        correo: '',
+        horas_contrato: 45,
+        puede_cerrar: false
+      });
       onNueva && onNueva();
     } catch (err) {
       console.error(err);
@@ -99,7 +104,9 @@ export default function NuevoUsuario({ onNueva }) {
       </div>
 
       <div className="nuevo-crew-actions">
-        <button type="submit" className="btn-create-crew">➕ Crear Crew</button>
+        <button type="submit" className="btn-create-crew">
+          ➕ Crear Crew
+        </button>
       </div>
     </form>
   );

@@ -1,4 +1,3 @@
-// src/pages/UsuariosPage.jsx
 import React, { useEffect, useState } from 'react';
 import { getUsuarios, updateUsuario, eliminarUsuario } from '../api/usuarios';
 import NuevoUsuario from './NuevoUsuario';
@@ -83,7 +82,8 @@ export default function UsuariosPage() {
   return (
     <div className="usuarios-page">
       <div className="usuarios-toolbar">
-        <h2>Crews</h2>
+        <h2>CREWS</h2>
+        <p className="usuarios-sub">Listado, edición y alta de personal</p>
       </div>
 
       {error && <div className="alert-error">{error}</div>}
