@@ -1,16 +1,16 @@
+// src/controllers/usuarios.controller.js
 const {
   crearNuevoUsuario,
   obtenerUsuarios,
   eliminarUsuarioPorId,
-  actualizarUsuario   // importo el nuevo método
-} = require('../models/usuario.model'); // Importo funciones del modelo de usuarios
+  actualizarUsuario
+} = require('../models/usuario.model');
 
-// ⬇️ Importo el servicio de sincronización con Excel (hoja "Trabajador")
+// Servicios de sincronización de Excel
 const { syncTrabajadoresSheet } = require('../services/excelSync');
 const { syncDisponibilidadesSheet } = require('../services/excelDisponibilidades');
 
 const crearUsuario = async (req, res) => {
-  // Desestructuro datos del body
   let {
     nombre,
     correo,
@@ -20,27 +20,19 @@ const crearUsuario = async (req, res) => {
     puede_cerrar
   } = req.body;
 
-  // Compruebo que vengan los campos obligatorios
   if (!nombre || !correo || horas_contrato == null || puede_cerrar == null) {
     return res.status(400).json({ error: 'Faltan campos obligatorios' });
   }
 
-  // Asigno contraseña por defecto si no se proporciona
   if (!contrasena) contrasena = 'pass123';
-
-  // Asigno rol por defecto si no se proporciona
   if (!rol) rol = 'crew';
 
-  // Convierto horas_contrato a número y compruebo que sea válido
   const permitted = [45, 30, 20, 16];
   horas_contrato = Number(horas_contrato);
   if (!permitted.includes(horas_contrato)) {
-    return res
-      .status(400)
-      .json({ error: 'Horas de contrato debe ser 45, 30, 20 o 16' });
+    return res.status(400).json({ error: 'Horas de contrato debe ser 45, 30, 20 o 16' });
   }
 
-  // Convierto puede_cerrar a boolean (acepto "si"/"no" o true/false)
   if (typeof puede_cerrar === 'string') {
     puede_cerrar = /^si$/i.test(puede_cerrar) || /^true$/i.test(puede_cerrar);
   } else {
@@ -48,7 +40,6 @@ const crearUsuario = async (req, res) => {
   }
 
   try {
-    // Creo el nuevo usuario en la base de datos
     const usuario = await crearNuevoUsuario({
       nombre,
       correo,
@@ -58,28 +49,27 @@ const crearUsuario = async (req, res) => {
       puede_cerrar
     });
 
-    // 🔄 Sincronizo Excel (hoja "Trabajador") en background
-    //    No bloqueo la respuesta; si falla, solo registro en logs.
-    syncTrabajadoresSheet()
-      .catch(err => console.error('Excel sync (crear) falló:', err));
+    // 🔄 IMPORTANTE: sincronizar en orden y esperando (Trabajador → Disponibilidades)
+    try {
+      await syncTrabajadoresSheet();
+      await syncDisponibilidadesSheet();
+    } catch (err) {
+      console.error('Excel sync (crear) falló:', err);
+    }
 
-    // Devuelvo el usuario creado con estado 201
     res.status(201).json(usuario);
   } catch (error) {
     console.error('❌ Error al crear usuario:', error);
-    // Devuelvo error de servidor
     res.status(500).json({ error: 'Error del servidor' });
   }
 };
 
 const listarUsuarios = async (_req, res) => {
   try {
-    // Obtengo todos los usuarios
     const lista = await obtenerUsuarios();
     res.json(lista);
   } catch (error) {
     console.error('❌ Error al obtener usuarios:', error);
-    // Devuelvo error de servidor
     res.status(500).json({ error: 'Error del servidor' });
   }
 };
@@ -93,14 +83,13 @@ const eliminarUsuario = async (req, res) => {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    // 🔄 Sincronizo Excel (tabla principal)
-    syncTrabajadoresSheet()
-      .catch(err => console.error('Excel sync (delete) falló:', err));
-
-    // 🧹 NUEVO: sincronizo disponibilidades también
-    // Esto limpiará automáticamente H:I y K:N de IDs que ya no existen en BD
-    syncDisponibilidadesSheet()
-      .catch(err => console.error('Excel disponibilidades sync (delete user) falló:', err));
+    // 🔄 IMPORTANTE: sincronizar en orden y esperando (Trabajador → Disponibilidades)
+    try {
+      await syncTrabajadoresSheet();
+      await syncDisponibilidadesSheet();
+    } catch (err) {
+      console.error('Excel sync (delete) falló:', err);
+    }
 
     res.json({ mensaje: 'Usuario eliminado', usuario: eliminado });
   } catch (error) {
@@ -121,26 +110,19 @@ const editarUsuario = async (req, res) => {
     puede_cerrar
   } = req.body;
 
-  // Validar campos obligatorios mínimos (nombre y correo)
   if (!nombre || !correo) {
     return res.status(400).json({ error: 'Nombre y correo son obligatorios.' });
   }
 
-  // Contraseña por defecto si no se envía
   if (!contrasena) contrasena = 'pass123';
-  // Rol por defecto
   if (!rol) rol = 'crew';
 
-  // Validar horas_contrato
   const permitted = [45, 30, 20, 16];
   horas_contrato = Number(horas_contrato);
   if (!permitted.includes(horas_contrato)) {
-    return res
-      .status(400)
-      .json({ error: 'Horas de contrato debe ser 45, 30, 20 o 16' });
+    return res.status(400).json({ error: 'Horas de contrato debe ser 45, 30, 20 o 16' });
   }
 
-  // Parsear puede_cerrar
   if (typeof puede_cerrar === 'string') {
     puede_cerrar = /^si$/i.test(puede_cerrar) || /^true$/i.test(puede_cerrar);
   } else {
@@ -160,9 +142,13 @@ const editarUsuario = async (req, res) => {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    // 🔄 Sincronizo Excel luego de actualizar
-    syncTrabajadoresSheet()
-      .catch(err => console.error('Excel sync (update) falló:', err));
+    // Editar usuario solo requiere actualizar la hoja principal.
+    // (Las disponibilidades se recalculan cuando cambien o al eliminar/crear usuarios)
+    try {
+      await syncTrabajadoresSheet();
+    } catch (err) {
+      console.error('Excel sync (update) falló:', err);
+    }
 
     res.json(usuario);
   } catch (error) {
@@ -175,5 +161,5 @@ module.exports = {
   crearUsuario,
   listarUsuarios,
   eliminarUsuario,
-  editarUsuario   // exporto el nuevo controlador
+  editarUsuario
 };
