@@ -49,9 +49,9 @@ async function syncDisponibilidadesSheet() {
     throw new Error('EXCEL_TRABAJADORES_PATH/INPUT_EXCEL_PATH no definido en .env');
   }
 
-  // 1) Usuarios (excluir admin id=19)
+  // 1) Usuarios (YA NO excluimos ningún ID)
   const { rows: usuarios } = await pool.query(
-    'SELECT id FROM usuarios WHERE id <> 19 ORDER BY id'
+    'SELECT id FROM usuarios ORDER BY id'
   );
   const userIds = usuarios.map(u => Number(u.id));
 
@@ -144,10 +144,10 @@ async function syncDisponibilidadesSheet() {
     rowPE++;
   }
 
-  // 8) Guardar por buffer (con estilos habilitados) → conserva TODO el formato
+  // 8) Guardar por buffer (con estilos habilitados)
   const buffer = await wb.xlsx.writeBuffer({
-    useStyles: true,           // << mantener estilos
-    useSharedStrings: true,    // << mantener shared strings
+    useStyles: true,
+    useSharedStrings: true,
   });
   await fs.promises.writeFile(EXCEL_PATH, buffer);
 
