@@ -87,93 +87,105 @@ export default function LicenciasPage() {
 
   return (
     <div className="lic-page">
-      <h1 className="lic-title">LICENCIAS</h1>
+      {/* Título estilo “marquesina” (igual familia que Home/Disponibilidades) */}
+      <header className="lic-hero">
+        <div className="lic-hero__inner">
+          <h1 className="poster-title">LICENCIAS</h1>
+          <p className="poster-sub">Registro de ausencias médicas por rango de fechas</p>
+        </div>
+      </header>
 
-      {error && <p className="lic-error">{error}</p>}
-      {loading && <p className="lic-loading">Cargando…</p>}
+      <div className="lic-content">
+        {error && <div className="lic-alert lic-alert--error">{error}</div>}
+        {loading && <div className="lic-alert">Cargando…</div>}
 
-      {/* Formulario */}
-      <form className="lic-form" onSubmit={handleSubmit}>
-        <label>
-          Crew
-          <select
-            name="usuario_id"
-            value={form.usuario_id}
-            onChange={handleChange}
-            required
-          >
-            <option value="">-- Selecciona un usuario --</option>
-            {Array.isArray(usuarios) &&
-              usuarios.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.nombre}
-                </option>
-              ))}
-          </select>
-        </label>
+        {/* Formulario */}
+        <form className="lic-card lic-form" onSubmit={handleSubmit}>
+          <div className="fi">
+            <label>Crew</label>
+            <select
+              name="usuario_id"
+              value={form.usuario_id}
+              onChange={handleChange}
+              required
+            >
+              <option value="">— Selecciona un usuario —</option>
+              {Array.isArray(usuarios) &&
+                usuarios.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.nombre}
+                  </option>
+                ))}
+            </select>
+          </div>
 
-        <label>
-          Inicio
-          <input
-            type="date"
-            name="fecha_inicio"
-            value={form.fecha_inicio}
-            onChange={handleChange}
-            required
-          />
-        </label>
+          <div className="fi">
+            <label>Inicio</label>
+            <input
+              type="date"
+              name="fecha_inicio"
+              value={form.fecha_inicio}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-        <label>
-          Fin
-          <input
-            type="date"
-            name="fecha_fin"
-            value={form.fecha_fin}
-            onChange={handleChange}
-            required
-          />
-        </label>
+          <div className="fi">
+            <label>Fin</label>
+            <input
+              type="date"
+              name="fecha_fin"
+              value={form.fecha_fin}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-        <button type="submit" className="btn-add">➕ Agregar licencia</button>
-      </form>
+          <div className="form-actions">
+            <button type="submit" className="btn btn-primary btn-add">➕ Agregar licencia</button>
+          </div>
+        </form>
 
-      {/* Tabla */}
-      {Array.isArray(licencias) && licencias.length > 0 ? (
-        <table className="lic-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>USUARIO</th>
-              <th>INICIO</th>
-              <th>FIN</th>
-              <th>ACCIONES</th>
-            </tr>
-          </thead>
-          <tbody>
-            {licencias.map((l) => {
-              const user = usuarios.find((u) => u.id === l.usuario_id);
-              return (
-                <tr key={l.id}>
-                  <td>{l.id}</td>
-                  <td>{user ? user.nombre : l.usuario_id}</td>
-                  <td>{fmtDate(l.fecha_inicio)}</td>
-                  <td>{fmtDate(l.fecha_fin)}</td>
-                  <td>
-                    <button
-                      className="btn-del"
-                      onClick={() => handleDelete(l.id)}
-                    >
-                      🗑️ Eliminar
-                    </button>
-                  </td>
+        {/* Tabla */}
+        {Array.isArray(licencias) && licencias.length > 0 ? (
+          <div className="lic-card">
+            <table className="lic-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Usuario</th>
+                  <th>Inicio</th>
+                  <th>Fin</th>
+                  <th>Acciones</th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      ) : !loading ? (
-        <p className="lic-empty">No hay licencias registradas.</p>
-      ) : null}
+              </thead>
+              <tbody>
+                {licencias.map((l) => {
+                  const user = usuarios.find((u) => u.id === l.usuario_id);
+                  return (
+                    <tr key={l.id}>
+                      <td data-label="ID">{l.id}</td>
+                      <td data-label="Usuario">{user ? user.nombre : l.usuario_id}</td>
+                      <td data-label="Inicio">{fmtDate(l.fecha_inicio)}</td>
+                      <td data-label="Fin">{fmtDate(l.fecha_fin)}</td>
+                      <td data-label="Acciones">
+                        <button
+                          className="btn btn-danger btn-del"
+                          onClick={() => handleDelete(l.id)}
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : !loading ? (
+          <div className="lic-card lic-empty">No hay licencias registradas.</div>
+        ) : null}
+      </div>
     </div>
   );
 }

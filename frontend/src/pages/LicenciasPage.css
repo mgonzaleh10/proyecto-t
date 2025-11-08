@@ -1,86 +1,215 @@
-@import url('https://fonts.googleapis.com/css2?family=Bangers&display=swap');
+/* ====== Licencias — Tema Burger King coherente con Home/Crews/Disp/Beneficios ====== */
+@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Nunito:wght@600;700;800;900&display=swap');
 
-.lic-page {
-  background: #fdf3e1; /* Beige claro */
-  min-height: 100vh;
-  padding: 2rem;
-  text-align: center;
-  position: relative;
+.lic-page{
+  /* Tokens BK (mismos tonos usados en las otras páginas) */
+  --bk-bg: #fff5e1;
+  --cream: #f3e1c6;
+  --bk-brown-900:#431901;
+  --bk-brown-800:#5b2b19;
+  --bk-brown-700:#8a4221;
+  --bk-brown-600:#9b4b25;
+  --bk-brown-500:#b85c2d; /* encabezados tabla */
+  --bk-brown-300:#cf8a5d;
+  --bk-brown-200:#e5c39b;
+  --bk-brown-100:#ffeeda;
+
+  --ketchup:#d4472c;  /* primario */
+  --cheese:#f2b12f;   /* acento */
+  --danger:#c0392b;
+
+  --radius-lg:16px;
+  --radius-md:12px;
+  --shadow:0 8px 22px rgba(0,0,0,.12);
+
+  min-height:100vh;
+  background: var(--bk-bg);
+  color:#3a2a22;
+  font-family:"Nunito", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* Título estilo Horarios */
-.lic-title {
-  font-family: 'Bangers', cursive;
-  font-size: 4rem;
-  color: #b33300; /* Rojo Burger King */
-  margin-bottom: 2rem;
-  letter-spacing: 2px;
+/* ====== Hero / Título estilo “marquesina” ====== */
+.lic-hero{
+  background: linear-gradient(180deg, rgba(0,0,0,.06), rgba(0,0,0,0)), #7f2f21; /* rojo tierra como Home */
+  border-bottom: 6px solid var(--bk-brown-900);
+  padding: clamp(16px, 3vw, 26px) 16px;
+}
+.lic-hero__inner{
+  width:min(1100px, 92%);
+  margin-inline:auto;
+}
+.poster-title{
+  margin:0;
+  font-family:"Alfa Slab One", serif;
+  font-size: clamp(32px, 6vw, 56px);
+  line-height: .98;
+  letter-spacing: .5px;
+  color: var(--cream);
+  text-shadow: 0 3px 0 rgba(0,0,0,.18);
+}
+.poster-sub{
+  margin: 10px 0 0;
+  color: #f8e9d1;
+  font-weight: 800;
+  letter-spacing: .3px;
 }
 
-/* Formulario */
-.lic-form {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
+/* ====== Contenido ====== */
+.lic-content{
+  width:min(1100px, 92%);
+  margin: 18px auto 28px;
+  display:grid;
+  gap:14px;
 }
 
+/* Alertas */
+.lic-alert{
+  background:#fffbe6;
+  border:1px solid var(--bk-brown-200);
+  color:#6a4a2d;
+  border-radius:12px;
+  padding:10px 12px;
+}
+.lic-alert--error{
+  background:#ffe6e3;
+  border-color:#ffb3a8;
+  color:#9d2b1f;
+}
+
+/* Cards */
+.lic-card{
+  background:#fff;
+  border:1px solid var(--bk-brown-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+
+/* ====== Formulario ====== */
+.lic-form{
+  display:grid;
+  grid-template-columns: 1.1fr 0.7fr 0.7fr auto;
+  gap:12px;
+  align-items:end;
+}
+.fi{ display:flex; flex-direction:column; gap:6px; }
+.fi label{
+  font-size:12px;
+  color: var(--bk-brown-700);
+  font-weight: 900;
+  letter-spacing:.2px;
+}
 .lic-form select,
-.lic-form input {
-  padding: 8px;
-  border: 2px solid #b33300;
-  border-radius: 4px;
+.lic-form input[type="date"]{
+  background:#fff;
+  border:1px solid var(--bk-brown-200);
+  border-radius:10px;
+  padding:10px 12px;
+  min-height:40px;
+  outline:none;
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.lic-form select:focus,
+.lic-form input[type="date"]:focus{
+  border-color: var(--bk-brown-300);
+  box-shadow: 0 0 0 3px rgba(184,92,45,.15);
+}
+.form-actions{ display:flex; justify-content:flex-end; }
+.btn{
+  border:none;
+  border-radius:12px;
+  font-weight:900;
+  padding:10px 16px;
+  cursor:pointer;
+  transition: transform .05s ease, filter .15s ease;
+}
+.btn:active{ transform: translateY(1px); }
+.btn-primary{ background: var(--ketchup); color:#fff7ec; }
+.btn-danger{ background: var(--danger); color:#fff; }
+
+/* ====== Tabla ====== */
+.lic-table{
+  width:100%;
+  border-collapse: separate;
+  border-spacing:0;
+  overflow:hidden;
+  border-radius:14px;
+  border:1px solid var(--bk-brown-200);
+}
+.lic-table thead th{
+  background: var(--bk-brown-500);    /* mismo café que Crews */
+  color:#fff;
+  text-align:left;
+  padding:12px 12px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.3px;
+  border-right:1px solid rgba(255,255,255,.25);
+}
+.lic-table thead th:last-child{ border-right:none; }
+
+.lic-table tbody td{
+  background:#fffdf8;
+  padding:12px;
+  border-top:1px solid var(--bk-brown-200);
+  border-right:1px solid var(--bk-brown-200);
+  vertical-align:middle;
+}
+.lic-table tbody td:last-child{ border-right:none; }
+.lic-table tbody tr:nth-child(odd) td{ background:#fff9ef; }
+
+/* Botón eliminar en tabla (hereda btn-danger) */
+.btn-del{
+  font-weight:900;
+  border-radius:10px;
+  padding:8px 12px;
 }
 
-.lic-form .btn-add {
-  background: #e66a00; /* Naranja fuerte */
-  color: white;
-  font-weight: bold;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 16px;
-  cursor: pointer;
+/* Vacío */
+.lic-empty{
+  text-align:center;
+  color:#7a5d4e;
+  font-weight:800;
 }
 
-/* Tabla estilo Burger King */
-.lic-table {
-  margin: 0 auto;
-  border-collapse: collapse;
-  width: 90%;
-  font-family: Arial, sans-serif;
-  font-size: 1.1rem;
+/* ====== Responsive ====== */
+@media (max-width: 900px){
+  .lic-form{
+    grid-template-columns: 1fr 1fr;
+  }
+  .form-actions{ grid-column: 1 / -1; }
 }
 
-.lic-table th {
-  background: #e66a00; /* Naranja */
-  color: white;
-  padding: 12px;
-  border: 2px solid #b33300;
-  text-transform: uppercase;
+@media (max-width: 720px){
+  .lic-form{ grid-template-columns: 1fr; }
+  .form-actions{ justify-content: stretch; }
+  .btn{ width:100%; }
+  .lic-table thead{ display:none; }
+  .lic-table, .lic-table tbody, .lic-table tr, .lic-table td{ display:block; width:100%; }
+  .lic-table tr{ border:1px solid var(--bk-brown-200); border-radius:10px; overflow:hidden; margin-bottom:10px; }
+  .lic-table tbody td{
+    border:none;
+    border-top:1px solid var(--bk-brown-200);
+    display:grid;
+    grid-template-columns: 40% 60%;
+    gap:8px;
+  }
+  .lic-table tbody td::before{
+    content: attr(data-label);
+    font-weight:900;
+    color: var(--bk-brown-700);
+  }
 }
 
-.lic-table td {
-  border: 2px solid #b33300;
-  padding: 10px;
-  text-align: center;
+/* ====== Fijadores por si algo global pisa los colores (como hicimos antes) ====== */
+.btn.btn-primary,
+button.btn-primary{
+  background: var(--ketchup) !important;
+  color:#fff7ec !important;
+  border: none !important;
 }
-
-.lic-table tbody tr:nth-child(odd) {
-  background: #fff7e6;
-}
-
-.lic-table tbody tr:nth-child(even) {
-  background: #ffe0b2;
-}
-
-/* Botón eliminar */
-.btn-del {
-  background: #b33300;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
+button.btn-danger{
+  background: var(--danger) !important;
+  color:#fff !important;
+  border: none !important;
 }
