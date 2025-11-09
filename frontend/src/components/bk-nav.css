@@ -1,0 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Nunito:wght@700;800;900&display=swap');
+
+:root{
+  --bk-brown:#4a1c12;
+  --bk-brown-2:#6f2d1c;
+  --bk-cream:#f3e1c6;
+  --bk-gold:#d8a33a;
+  --shadow: 0 8px 24px rgba(0,0,0,.35);
+  --radius: 18px;
+}
+
+/* Contenedor pegajoso */
+.bk-nav{
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  backdrop-filter: blur(3px);
+  background: linear-gradient(180deg, #7e3723, #5b2216 60%, #4a1c12);
+  box-shadow: inset 0 -1px 0 rgba(255,255,255,.08);
+}
+
+/* Inner: ahora permite wrap para que NO SE CORTE */
+.bk-nav-inner{
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 10px 20px 14px;   /* bottom extra para que no se vea “cortado” */
+  display: flex;
+  flex-wrap: wrap;           /* << clave: permite segunda fila */
+  align-items: center;
+  gap: 12px 14px;            /* fila x columna */
+}
+
+/* Marca */
+.brand{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 8px;
+}
+.logo{ font-size: 24px; transform: translateY(2px); }
+.brand-text{ line-height: 1.05; color: var(--bk-cream); font-family: "Alfa Slab One", serif; }
+.brand-text .l1{ display:block; font-size: 20px; }
+.brand-text .l2{ display:block; font-size: 20px; }
+
+/* Bloque de links: también flexible y WRAP */
+.links{
+  display: flex;
+  flex-wrap: wrap;           /* << segunda fila si no cabe */
+  align-items: center;
+  gap: 12px;
+  /* que ocupe el resto del ancho */
+  flex: 1 1 auto;
+}
+
+/* Pastillas */
+.pill{
+  font-family: Nunito, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-weight: 900;
+  color: #ffd9c2;
+  text-decoration: none;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #5a2416, #3b140c 55%, #2b0f08);
+  border: 2px solid #2b0f08;
+  box-shadow: 0 4px 0 #220b06, var(--shadow);
+  transition: transform .06s ease, filter .15s ease, background .15s ease, color .15s ease;
+  white-space: nowrap;       /* no partir cada palabra */
+}
+.pill:hover{ filter: brightness(1.06); transform: translateY(1px); }
+.pill.active{                 /* estado activo */
+  color: #2b170c;
+  background: linear-gradient(180deg, #f6c35c, var(--bk-gold));
+  border-color: #a36910;
+  box-shadow: 0 4px 0 #7a4a0b, var(--shadow);
+}
+
+/* Responsivo: reduce paddings/tamaños y evita “corte” visual */
+@media (max-width: 1100px){
+  .brand-text .l1,.brand-text .l2{ font-size: 18px; }
+  .pill{ padding: 7px 12px; }
+}
+@media (max-width: 860px){
+  .brand-text{ display:none; }  /* deja solo el ícono para ganar espacio */
+  .pill{ padding: 7px 10px; font-size: 14px; }
+}
+@media (max-width: 560px){
+  .pill{ padding: 6px 9px; font-size: 13px; }
+}
