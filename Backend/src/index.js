@@ -7,6 +7,7 @@ const usuariosRoutes      = require('./routes/usuarios.routes');        // Impor
 const beneficiosRoutes    = require('./routes/beneficios.routes');      // Importo mis rutas de beneficios
 const turnosRoutes        = require('./routes/turnos.routes');          // Importo mis rutas de turnos
 const licenciasRoutes     = require('./routes/licencias.routes');
+const intercambiosRoutes = require('./routes/intercambios.routes.js'); // ✅
 
 
 const db = require('./config/db'); // Importo la configuración de la BD
@@ -21,6 +22,7 @@ app.use('/beneficios', beneficiosRoutes);       // Configuro ruta /beneficios
 app.use('/turnos', turnosRoutes);               // Configuro ruta /turnos
 app.use('/licencias', licenciasRoutes);
 app.use('/turnos', require('./routes/turnos.routes'));
+app.use('/intercambios', intercambiosRoutes); // ✅ nueva ruta
 
 const PORT = process.env.PORT || 3000; // Defino el puerto del servidor
 app.listen(PORT, async () => {

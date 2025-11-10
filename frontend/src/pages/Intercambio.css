@@ -1,0 +1,225 @@
+@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Nunito:wght@700;800;900&display=swap');
+
+/* ----- Variables SOLO dentro de la página ----- */
+.intercambio-page{
+  --bk-bg:#6a2e1f; --bk-bg2:#8a4221; --bk-cream:#f3e1c7; --bk-cream-2:#f7eddc;
+  --bk-brown:#432010; --bk-dark:#2a0f07; --bk-green:#3fa35a; --bk-green-dark:#2b7a42;
+  --bk-red:#c0392b; --bk-red-dark:#9f2b1d; --bk-gold:#e0a72b; --bk-gold-dark:#c88910;
+  --bk-orange:#d96a28; --bk-orange-dark:#b3521a;
+
+  --radius:12px;
+  --shadow-outer: 0 12px 20px rgba(0,0,0,.22);
+  --shadow-inset: inset 0 2px 0 rgba(255,255,255,.08);
+}
+
+/* ===== Lienzo tipo Planilla ===== */
+.intercambio-page.bk-wrap{
+  min-height:100vh;
+  background:
+    radial-gradient(1200px 300px at 50% -100px, var(--bk-bg2), transparent 60%),
+    linear-gradient(180deg, #7e3723, #5b2216 60%, #4a1c12);
+  padding:12px;
+  color:#2b170c;
+  font-family: Nunito, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+/* ===== Cabecera (poster) ===== */
+.intercambio-page .disp-hero{
+  border:3px solid #6b2a18;
+  background:linear-gradient(180deg,#8e4029,#6f2d1c 55%,#5b2315);
+  border-radius:18px;
+  padding:12px 14px 8px;
+  box-shadow: var(--shadow-inset), var(--shadow-outer);
+  margin: 0 auto 10px;
+  max-width:1180px;
+}
+.intercambio-page .disp-title{
+  margin:0; text-align:center;
+  font-family:"Alfa Slab One", serif;
+  font-size:clamp(28px,4.6vw,56px);
+  line-height:.94;
+  color:var(--bk-cream);
+  text-shadow:0 3px 0 rgba(0,0,0,.18);
+  letter-spacing:.5px;
+}
+.intercambio-page .disp-sub{
+  text-align:center; margin:2px 0 0; color:#f8e7cf; opacity:.9; font-weight:900;
+}
+
+/* ===== Sección (título barra) ===== */
+.intercambio-page .bk-section{
+  max-width:1180px;
+  margin: 12px auto 18px;
+}
+.intercambio-page .sec-title{
+  margin: 0 0 8px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  color: #fff3de;
+  background:#6f2d1c;
+  border:3px solid #3c160c;
+  border-radius: 10px;
+  padding:6px 10px;
+  box-shadow: var(--shadow-inset);
+}
+
+/* ===== Formulario ===== */
+.intercambio-page .bk-form{
+  background: var(--bk-cream-2);
+  border:4px solid #3c160c;
+  border-radius:16px;
+  padding:14px;
+  box-shadow: 0 10px 18px rgba(0,0,0,.18);
+}
+.intercambio-page .grid{
+  display:grid;
+  grid-template-columns: repeat(5, minmax(160px, 1fr));
+  gap:10px;
+}
+@media (max-width:1024px){ .intercambio-page .grid{ grid-template-columns:repeat(2, minmax(160px,1fr)); } }
+@media (max-width:560px){  .intercambio-page .grid{ grid-template-columns:1fr; } }
+
+.intercambio-page .field{ display:flex; flex-direction:column; gap:6px; }
+.intercambio-page .field span{
+  font-size:12px; font-weight:900; color:#2b170c; letter-spacing:.02em; text-transform:uppercase;
+}
+.intercambio-page .field input,
+.intercambio-page .field select{
+  background:#f7eddc;
+  border:3px solid #2b170c;
+  border-radius:10px;
+  padding:8px 10px;
+  font-weight:900;
+  min-height:40px;
+  color:#2b170c;
+  box-shadow:0 2px 0 #2b170c, 0 6px 10px rgba(0,0,0,.08);
+  outline:none;
+  transition: filter .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.intercambio-page .field input::placeholder{ color:#8a6a54; font-weight:800; opacity:.9; }
+.intercambio-page .field input:focus,
+.intercambio-page .field select:focus{
+  filter: brightness(1.03);
+  border-color:#3c160c;
+  box-shadow:0 0 0 3px rgba(224,167,43,.25);
+}
+.intercambio-page .actions{ margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+.intercambio-page .btn-primary{
+  background:var(--bk-green);
+  color:#fff; border:3px solid #1d5a30; border-radius:999px;
+  padding:9px 14px; font-weight:900; cursor:pointer;
+  box-shadow:0 2px 0 #1d5a30, 0 6px 12px rgba(0,0,0,.18);
+  transition:transform .05s ease, filter .15s ease;
+}
+.intercambio-page .btn-primary:hover{ filter:brightness(1.05); }
+.intercambio-page .btn-primary:active{ transform:translateY(1px); }
+.intercambio-page .btn-ghost{
+  background:#f3e1c7; color:#2b170c; border:3px solid #3c160c; border-radius:999px;
+  padding:8px 12px; font-weight:900; cursor:pointer;
+  box-shadow:0 2px 0 #2b170c, 0 6px 10px rgba(0,0,0,.12);
+}
+
+/* ===== Resultados ===== */
+.intercambio-page .cards{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  max-width:1180px;
+  margin: 0 auto;
+}
+@media (max-width:1024px){ .intercambio-page .cards{ grid-template-columns:1fr; } }
+
+.intercambio-page .card{
+  background: var(--bk-cream-2);
+  border:4px solid #3c160c;
+  border-radius:16px;
+  padding:12px;
+  box-shadow:0 10px 18px rgba(0,0,0,.18);
+}
+.intercambio-page .card-head{
+  display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;
+}
+.intercambio-page .card h3{
+  margin:0; font-weight:900; text-transform:uppercase; letter-spacing:.3px; color:#2b170c;
+}
+.intercambio-page .pill{
+  display:inline-flex; align-items:center; justify-content:center;
+  min-width:28px; height:28px; padding:0 8px;
+  border-radius:999px; background:#f3e1c7;
+  border:3px solid #3c160c; color:#2b170c; font-weight:900;
+  box-shadow:0 2px 0 #3c160c;
+}
+
+/* Item */
+.intercambio-page .item{
+  background:#f7eddc;
+  border:3px solid #2b170c;
+  border-radius:10px;
+  padding:10px 12px;
+  margin-top:8px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.30), 0 4px 8px rgba(0,0,0,.08);
+}
+.intercambio-page .item-main{
+  display:grid; grid-template-columns: 1fr auto; align-items:center; gap:10px;
+}
+.intercambio-page .who strong{ font-weight:900; color:#2b170c; }
+.intercambio-page .timing{ margin:4px 0; font-weight:900; color:#2b170c; }
+.intercambio-page .motivo{ color:#5b3a2b; font-weight:800; }
+
+.intercambio-page .score .badge{
+  display:inline-block; padding:5px 10px; border-radius:9px; font-weight:900; border:2px solid #00000022;
+}
+.intercambio-page .badge.ok{  background:#e8f7ef; color:#0b7b46; border-color:#0b7b46; }
+.intercambio-page .badge.mid{ background:#fff5de; color:#aa6b00; border-color:#aa6b00; }
+.intercambio-page .badge.low{ background:#fde7e6; color:#b02a1c; border-color:#b02a1c; }
+
+.intercambio-page .item-actions{ margin-top:8px; display:flex; gap:8px; }
+
+/* Swap */
+.intercambio-page .swap-grid{
+  display:grid; grid-template-columns:1fr 60px 1fr; gap:10px; align-items:center; margin:6px 0 4px;
+}
+.intercambio-page .swap-grid .box{
+  background: var(--bk-cream-2);
+  border:3px dashed #e8d7bd;
+  border-radius:10px; padding:8px; text-align:center;
+}
+.intercambio-page .swap-grid .arrow{
+  background:transparent; border:none; font-size:26px; color:#6d311d; font-weight:900;
+}
+.intercambio-page .box .label{
+  display:block; font-size:12px; font-weight:900; color:#6b4635; text-transform:uppercase;
+}
+.intercambio-page .box .timing{ font-weight:900; color:#2b170c; }
+
+/* Debug & error */
+.intercambio-page .debug{
+  margin-top:10px; background:#fff9f0;
+  border:2px dashed #e8d7bd;
+  padding:10px; border-radius:12px;
+}
+.intercambio-page .debug summary{ cursor:pointer; font-weight:900; color:#2b170c; }
+.intercambio-page .bk-error{
+  color:#b22a1c; background:#ffe8e6; border:3px solid #b22a1c;
+  padding:8px 12px; border-radius:12px; font-weight:900;
+}
+
+/* Historial */
+.intercambio-page .hist-item{
+  display:flex; align-items:center; justify-content:space-between;
+  background: var(--bk-cream-2);
+  border:3px solid #2b170c; border-radius:10px;
+  padding:10px 12px; margin-top:8px;
+}
+.intercambio-page .tag{
+  padding:3px 8px; border-radius:8px; font-weight:900;
+}
+.intercambio-page .tag.cobertura{ background:#fff0e9; color:#b12d1c; border:2px solid #b12d1c; }
+.intercambio-page .tag.swap{      background:#eef9f1; color:#0b7b46; border:2px solid #0b7b46; }
+.intercambio-page .hist-meta{ color:#573a2c; font-weight:800; }
+
+/* Responsivo */
+@media (max-width:1280px){
+  .intercambio-page .disp-hero{ margin-bottom:8px; }
+}

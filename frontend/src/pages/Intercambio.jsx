@@ -1,129 +1,276 @@
-import React, { useState } from 'react'; // Importo React y useState
-import { intercambio } from '../api/turnos'; // Importo API de intercambio
+// src/pages/Intercambio.jsx
+import React, { useEffect, useMemo, useState } from 'react';
+import './Intercambio.css';
+
+import { getUsuarios } from '../api/usuarios';
+import { recomendarIntercambio, confirmarIntercambio, listarIntercambios } from '../api/intercambios.jsx';
 
 export default function Intercambio() {
-  // Defino estado para el formulario de intercambio
+  // ====== Estados base ======
+  const [usuarios, setUsuarios] = useState([]);
   const [form, setForm] = useState({
     usuario_id: '',
+    turno_id: '',         // opcional (si lo tienes, el backend usará ese turno exacto)
     fecha: '',
     hora_inicio: '',
     hora_fin: ''
   });
-  const [recomendados, setRecomendados] = useState([]); // Guardo recomendaciones
-  const [error, setError] = useState(null); // Guardo mensaje de error
 
-  // Actualizo estado al cambiar cualquier input
+  const [loading, setLoading] = useState(false);
+  const [resp, setResp] = useState({ swaps: [], coberturas: [], debug: null });
+  const [error, setError] = useState('');
+  const [historial, setHistorial] = useState([]);
+
+  // ====== Carga inicial ======
+  useEffect(() => {
+    getUsuarios().then(r => setUsuarios(r.data || [])).catch(() => {});
+    listarIntercambios({}).then(r => setHistorial(r.data || [])).catch(() => {});
+  }, []);
+
+  // ====== Helpers ======
+  const usuarioMap = useMemo(() => {
+    const m = new Map();
+    usuarios.forEach(u => m.set(u.id, u));
+    return m;
+  }, [usuarios]);
+
   const handleChange = e => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: value }));
   };
 
-  // Manejo el envío del formulario
-  const handleSubmit = async e => {
+  // ====== Buscar recomendaciones ======
+  const onBuscar = async (e) => {
     e.preventDefault();
-    setError(null);
-    setRecomendados([]);
-
-    // Valido que todos los campos estén completos
-    if (!form.usuario_id || !form.fecha || !form.hora_inicio || !form.hora_fin) {
-      setError('Completa todos los campos');
-      return;
+    setError('');
+    setLoading(true);
+    setResp({ swaps: [], coberturas: [], debug: null });
+    try {
+      const payload = {
+        usuario_id: Number(form.usuario_id),
+        turno_id: form.turno_id ? Number(form.turno_id) : null,
+        fecha: form.fecha,
+        hora_inicio: form.hora_inicio,
+        hora_fin: form.hora_fin
+      };
+      const { data } = await recomendarIntercambio(payload);
+      setResp({
+        swaps: data.swaps || [],
+        coberturas: data.coberturas || [],
+        debug: data.debug || null
+      });
+    } catch (err) {
+      setError('No se pudieron obtener recomendaciones.');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  // ====== Confirmar (swap o cobertura) ======
+  const confirmar = async (cand) => {
+    const isSwap = cand.tipo === 'swap';
+    const uA = Number(form.usuario_id);
+    const uB = cand.usuario_id;
+
+    const confirmMsg = isSwap
+      ? `Confirmar INTERCAMBIO real:\n\nA (ID ${uA}) cede su turno ${form.fecha} ${form.hora_inicio}-${form.hora_fin}\nB (${cand.nombre}) cede su turno ${cand.intercambio.fechaB} ${cand.intercambio.inicioB}-${cand.intercambio.finB}\n\n¿Deseas confirmar?`
+      : `Confirmar COBERTURA:\n\nB (${cand.nombre}) cubrirá el turno de A (ID ${uA}) el ${form.fecha} ${form.hora_inicio}-${form.hora_fin}.\n\n¿Deseas confirmar?`;
+
+    if (!window.confirm(confirmMsg)) return;
 
     try {
-      // Solicito recomendaciones al backend
-      const res = await intercambio(form);
-      setRecomendados(res.data.recomendados || []); // Actualizo recomendaciones
-    } catch (err) {
-      console.error(err);
-      setError('Error al solicitar recomendaciones'); // Seteo el error
+      // *********** AQUÍ va el payload completo que me pediste ***********
+      const payload = {
+        tipo: isSwap ? 'swap' : 'cobertura',
+        turno_origen_id: form.turno_id ? Number(form.turno_id) : null, // opcional
+        usuario_solicitante: uA,
+        usuario_candidato: uB,
+        fecha: form.fecha,
+        hora_inicio: form.hora_inicio,   // requerido si no mandas turno_origen_id
+        hora_fin: form.hora_fin,         // requerido si no mandas turno_origen_id
+        ...(isSwap ? { turno_destino_id: cand.intercambio.turnoDestinoId } : {})
+      };
+      // *******************************************************************
+
+      await confirmarIntercambio(payload); // no usamos 'data' para evitar warning
+      alert('✅ Intercambio/Cobertura confirmado');
+
+      // refresco historial
+      listarIntercambios({}).then(r => setHistorial(r.data || [])).catch(() => {});
+    } catch (e) {
+      alert('❌ No se pudo confirmar');
     }
   };
 
+  // ====== Vista ======
   return (
-    <div style={{ padding: '2rem' }}> {/* Contenedor principal */}
-      <h2>Solicitar Intercambio de Turno</h2> {/* Título de la sección */}
-      <form onSubmit={handleSubmit} style={{ marginBottom: '1.5rem' }}>
-        {/* Input de ID de crew */}
-        <div>
-          <label>
-            Crew (usuario_id):
-            <input
-              type="number"
-              name="usuario_id"
-              value={form.usuario_id}
-              onChange={handleChange}
-              style={{ marginLeft: '0.5rem' }}
-            />
-          </label>
-        </div>
-        {/* Input de fecha */}
-        <div>
-          <label>
-            Fecha:
-            <input
-              type="date"
-              name="fecha"
-              value={form.fecha}
-              onChange={handleChange}
-              style={{ marginLeft: '0.5rem' }}
-            />
-          </label>
-        </div>
-        {/* Input de hora de inicio */}
-        <div>
-          <label>
-            Hora inicio:
-            <input
-              type="time"
-              name="hora_inicio"
-              value={form.hora_inicio}
-              onChange={handleChange}
-              style={{ marginLeft: '0.5rem' }}
-            />
-          </label>
-        </div>
-        {/* Input de hora de fin */}
-        <div>
-          <label>
-            Hora fin:
-            <input
-              type="time"
-              name="hora_fin"
-              value={form.hora_fin}
-              onChange={handleChange}
-              style={{ marginLeft: '0.5rem' }}
-            />
-          </label>
-        </div>
-        {/* Botón para enviar formulario */}
-        <button type="submit" style={{ marginTop: '1rem' }}>
-          Buscar recomendaciones
-        </button>
-      </form>
+    <div className="intercambio-page bk-wrap">
+      <header className="disp-hero">
+  <h1 className="disp-title">INTERCAMBIOS Y COBERTURAS</h1>
+  <p className="disp-sub">Gestiona cambios de turno de forma rápida y visual</p>
+</header>
 
-      {/* Muestro mensaje de error si existe */}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
 
-      {/* Muestro lista de recomendaciones si hay */}
-      {recomendados.length > 0 && (
-        <>
-          <h3>Recomendaciones:</h3>
-          <ul>
-            {recomendados.map((r, i) => (
-              <li key={i}>
-                Crew <strong>{r.usuario_id}</strong> puede intercambiar con el turno de{' '}
-                <em>{new Date(r.turnoDestino.fecha).toLocaleDateString()}</em> de{' '}
-                {r.turnoDestino.hora_inicio} a {r.turnoDestino.hora_fin}
-              </li>
+      {/* FORM */}
+      <section className="bk-section">
+        <h2 className="sec-title">Turno a cambiar</h2>
+        <form className="bk-form" onSubmit={onBuscar}>
+          <div className="grid">
+            <label className="field">
+              <span>Trabajador (A)</span>
+              <select name="usuario_id" value={form.usuario_id} onChange={handleChange} required>
+                <option value="">— Elegir —</option>
+                {usuarios.map(u => (
+                  <option key={u.id} value={u.id}>{u.nombre} ({u.horas_contrato}h)</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="field">
+              <span>Fecha</span>
+              <input type="date" name="fecha" value={form.fecha} onChange={handleChange} required/>
+            </label>
+
+            <label className="field">
+              <span>Inicio</span>
+              <input type="time" name="hora_inicio" value={form.hora_inicio} onChange={handleChange} required/>
+            </label>
+
+            <label className="field">
+              <span>Fin</span>
+              <input type="time" name="hora_fin" value={form.hora_fin} onChange={handleChange} required/>
+            </label>
+
+            <label className="field">
+              <span>ID Turno (opcional)</span>
+              <input
+                type="number"
+                name="turno_id"
+                placeholder="Ej: 287"
+                value={form.turno_id}
+                onChange={handleChange}
+              />
+              <small>Opcional</small>
+            </label>
+          </div>
+
+          <div className="actions">
+            <button className="btn-primary" disabled={loading}>
+              {loading ? 'Buscando…' : 'Buscar opciones'}
+            </button>
+          </div>
+
+          {error && <p className="bk-error">{error}</p>}
+        </form>
+      </section>
+
+      {/* RESULTADOS */}
+      <section className="bk-section">
+        <h2 className="sec-title">Opciones encontradas</h2>
+
+        <div className="cards">
+          {/* SWAPS */}
+          <div className="card">
+            <div className="card-head">
+              <h3>Intercambios reales (preferidos)</h3>
+              <span className="pill">{resp.swaps.length}</span>
+            </div>
+
+            {resp.swaps.length === 0 && <p className="empty">No hay intercambios reales esta semana.</p>}
+
+            {resp.swaps.map((r, i) => (
+              <div key={`s-${i}`} className="item">
+                <div className="item-main">
+                  <div className="who">
+                    <strong>{r.nombre}</strong> <em>({usuarioMap.get(r.usuario_id)?.horas_contrato || '?'}h)</em>
+                  </div>
+                  <div className="score">
+                    <span className={`badge ${r.score >= 15 ? 'ok' : r.score >= 8 ? 'mid' : 'low'}`}>
+                      Score {r.score}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="swap-grid">
+                  <div className="box">
+                    <span className="label">Turno A</span>
+                    <div className="timing">{form.fecha} · {form.hora_inicio} — {form.hora_fin}</div>
+                  </div>
+                  <div className="box arrow">⇆</div>
+                  <div className="box">
+                    <span className="label">Turno B</span>
+                    <div className="timing">{r.intercambio.fechaB} · {r.intercambio.inicioB} — {r.intercambio.finB}</div>
+                  </div>
+                </div>
+
+                <div className="motivo">{r.motivo}</div>
+
+                <div className="item-actions">
+                  <button className="btn-ghost" onClick={() => confirmar(r)}>Confirmar</button>
+                </div>
+              </div>
             ))}
-          </ul>
-        </>
-      )}
+          </div>
 
-      {/* Muestro mensaje si no hay recomendaciones y no hay error */}
-      {recomendados.length === 0 && !error && (
-        <p>No se encontraron recomendaciones.</p>
-      )}
+          {/* COBERTURAS */}
+          <div className="card">
+            <div className="card-head">
+              <h3>Coberturas</h3>
+              <span className="pill">{resp.coberturas.length}</span>
+            </div>
+
+            {resp.coberturas.length === 0 && <p className="empty">No hay coberturas para ese turno.</p>}
+
+            {resp.coberturas.map((r, i) => (
+              <div key={`c-${i}`} className="item">
+                <div className="item-main">
+                  <div className="who">
+                    <strong>{r.nombre}</strong> <em>({usuarioMap.get(r.usuario_id)?.horas_contrato || '?'}h)</em>
+                  </div>
+                  <div className="score">
+                    <span className={`badge ${r.score >= 12 ? 'ok' : r.score >= 6 ? 'mid' : 'low'}`}>
+                      Score {r.score}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="timing">{form.fecha} · {form.hora_inicio} — {form.hora_fin}</div>
+                <div className="motivo">{r.motivo}</div>
+
+                <div className="item-actions">
+                  <button className="btn-ghost" onClick={() => confirmar(r)}>Confirmar</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* DEBUG opcional */}
+        {resp.debug && (
+          <details className="debug">
+            <summary>Ver motivos de descarte</summary>
+            <pre>{JSON.stringify(resp.debug, null, 2)}</pre>
+          </details>
+        )}
+      </section>
+
+      {/* HISTORIAL */}
+      <section className="bk-section">
+        <h2 className="sec-title">Historial de cambios/coberturas</h2>
+        <div className="card">
+          {historial.length === 0 && <p className="empty">Sin movimientos aún.</p>}
+          {historial.slice(0,8).map(h => (
+            <div key={h.id} className="hist-item">
+              <div>
+                <strong>#{h.id}</strong> · <span className={`tag ${h.tipo}`}>{h.tipo}</span> · <em>{h.estado}</em>
+              </div>
+              <div className="hist-meta">
+                {h.solicitante_nombre} → {h.candidato_nombre} · {new Date(h.fecha).toLocaleDateString()}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
