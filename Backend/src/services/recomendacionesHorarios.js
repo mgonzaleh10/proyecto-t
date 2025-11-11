@@ -221,6 +221,14 @@ async function recomendarIntercambioService({
       // B debe poder cubrir el turno de A
       if (!bPuedeTurnoA) { debug.notas.push(`swap descartado A<->${uid}: B sin disponibilidad para la fecha destino`); continue; }
 
+      // 🔒 DESCARTAR SWAP TRIVIAL: mismo día y mismo horario (no aporta)
+      if (sameDay(tB.fecha, turnoA.fecha) &&
+          tB.hora_inicio === turnoA.hora_inicio &&
+          tB.hora_fin === turnoA.hora_fin) {
+        debug.notas.push(`swap descartado A<->${uid}: mismo día y mismo horario (intercambio trivial)`);
+        continue;
+      }
+
       // Duraciones equivalentes con tolerancia
       const minsB = minutesBetween(tB.hora_inicio, tB.hora_fin);
       if (Math.abs(minsA - minsB) > TOL_MIN) {
