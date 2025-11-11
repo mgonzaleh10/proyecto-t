@@ -1,295 +1,305 @@
 // src/services/recomendacionesHorarios.js (CommonJS)
-
-// Pool: en tu db.js exportas el pool directamente con `module.exports = pool`
 const pool = require('../config/db.js');
 
-// ===== Config =====
-const DEBUG = true;          // <- pon en false si no quieres ver "debug.descartes"
-const TOLERANCIA_MIN = 30;   // minutos de flexibilidad en disponibilidad (±)
+/* ========================== Helpers de tiempo/fechas ========================== */
 
-// ===== Utilidades =====
-const parseHM = (hm) => {
-  const [h, m] = String(hm).split(':').map(Number);
-  return h * 60 + (m || 0);
-};
-const toYMD = (d) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${dd}`;
-};
-// Normaliza tildes y minúsculas (miércoles → miercoles)
-const normalize = (str) =>
-  String(str || '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-
-const DAY_LABELS = ['lunes','martes','miercoles','jueves','viernes','sabado','domingo'];
-
-const weekdayIdx = (dateStr) => {
-  // 0=Lunes ... 6=Domingo
-  const d = new Date(dateStr + 'T00:00:00');
-  return (d.getDay() + 6) % 7;
-};
-const dayLabelFromDate = (dateStr) => DAY_LABELS[weekdayIdx(dateStr)];
-
-// Lunes y domingo de la semana de una fecha YYYY-MM-DD
-const weekRange = (ymd) => {
-  const d = new Date(ymd + 'T00:00:00');
-  const diff = (d.getDay() + 6) % 7;
-  const mon = new Date(d); mon.setDate(d.getDate() - diff);
-  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
-  return { monday: toYMD(mon), sunday: toYMD(sun) };
-};
-
-const overlaps = (aS,aE,bS,bE) => Math.max(parseHM(aS),parseHM(bS)) < Math.min(parseHM(aE),parseHM(bE));
-const isClosing = (fin) => String(fin).slice(0,5) === '23:30';
-// Duración efectiva en horas (resto 1 hora colación como en tu planilla)
-const durHoras  = (ini,fin) => Math.max(0, (parseHM(fin)-parseHM(ini))/60 - 1);
-
-// ===== Acceso a datos =====
-async function getTurnoById(turnoId) {
-  const { rows } = await pool.query(`SELECT * FROM turnos WHERE id = $1`, [turnoId]);
-  return rows[0];
+// Acepta 'YYYY-MM-DD', Date, o 'YYYY-MM-DDTHH:mm:ssZ'
+function toDate(x) {
+  if (x instanceof Date) return x;
+  if (typeof x === 'string') {
+    // Si viene solo 'YYYY-MM-DD' (sin 'T'), fuerzo medianoche local
+    if (!x.includes('T')) return new Date(`${x}T00:00:00`);
+    return new Date(x);
+  }
+  throw new Error(`Fecha inválida: ${x}`);
 }
-async function getUsuariosExcept(exceptId) {
-  const { rows } = await pool.query(`SELECT * FROM usuarios WHERE id <> $1 ORDER BY id`, [exceptId]);
+const fmt = (d) => d.toISOString().slice(0, 10);
+
+function getWeekRange(dateStr) {
+  const d = toDate(dateStr);
+  // Lunes a Domingo
+  const dow = (d.getDay() + 6) % 7; // 0=lun
+  const start = new Date(d); start.setDate(d.getDate() - dow);
+  const end = new Date(start); end.setDate(start.getDate() + 6);
+  return { start: fmt(start), end: fmt(end) };
+}
+
+function minutesBetween(t1, t2) {
+  // Permite 'HH:MM' o 'HH:MM:SS'
+  const p = (t) => t.split(':').map(Number);
+  const [h1, m1] = p(t1);
+  const [h2, m2] = p(t2);
+  return (h2 * 60 + m2) - (h1 * 60 + m1);
+}
+const hoursBetween = (t1, t2) => minutesBetween(t1, t2) / 60;
+
+function sameDay(a, b) {
+  return fmt(toDate(a)) === fmt(toDate(b));
+}
+
+function dayName(dateStr) {
+  const d = toDate(dateStr);
+  const idx = (d.getDay() + 6) % 7;
+  return ['lunes','martes','miércoles','jueves','viernes','sábado','domingo'][idx];
+}
+
+function timeInRange(t, from, to) {
+  return minutesBetween(from, t) >= 0 && minutesBetween(t, to) >= 0;
+}
+function rangeWithin(aStart, aEnd, bStart, bEnd) {
+  // ¿[a] cabe dentro de [b]?
+  return timeInRange(aStart, bStart, bEnd) && timeInRange(aEnd, bStart, bEnd);
+}
+
+/* ========================== Acceso a datos ========================== */
+
+async function getUsuariosMap() {
+  const { rows } = await pool.query('SELECT id, nombre, horas_contrato FROM usuarios');
+  const map = new Map();
+  rows.forEach(r => map.set(r.id, r));
+  return map;
+}
+
+async function getTurnosSemana({ start, end }) {
+  const { rows } = await pool.query(
+    `SELECT id, usuario_id, fecha, hora_inicio, hora_fin
+     FROM turnos
+     WHERE fecha BETWEEN $1 AND $2
+     ORDER BY usuario_id, fecha, hora_inicio`,
+    [start, end]
+  );
   return rows;
 }
-async function getUserById(uid) {
-  const { rows } = await pool.query(`SELECT * FROM usuarios WHERE id = $1`, [uid]);
-  return rows[0];
-}
+
 async function getDisponibilidades() {
-  // Mapa: disp[usuario_id][dia_norm] = { inicio, fin }
-  const { rows } = await pool.query(`SELECT * FROM disponibilidades`);
-  const map = {};
+  const { rows } = await pool.query(
+    `SELECT id, usuario_id, dia_semana, hora_inicio, hora_fin FROM disponibilidades`
+  );
+  const map = new Map(); // clave: "usuarioId|día"
   rows.forEach(r => {
-    const dayNorm = normalize(r.dia_semana);
-    (map[r.usuario_id] ||= {})[dayNorm] = {
-      inicio: String(r.hora_inicio).slice(0,5),
-      fin:    String(r.hora_fin).slice(0,5),
-    };
-  });
-  return map;
-}
-async function getBeneficiosMap() {
-  // beneficios[usuario_id][ymd] = tipo
-  const { rows } = await pool.query(`SELECT usuario_id, tipo, fecha FROM beneficios`);
-  const map = {};
-  rows.forEach(b => {
-    const ymd = String(b.fecha).slice(0,10);
-    (map[b.usuario_id] ||= {})[ymd] = b.tipo;
-  });
-  return map;
-}
-async function getLicenciasRangoMap() {
-  // licencias[usuario_id][ymd] = true
-  const { rows } = await pool.query(`SELECT usuario_id, fecha_inicio, fecha_fin FROM licencias`);
-  const map = {};
-  rows.forEach(l => {
-    const start = new Date(String(l.fecha_inicio).slice(0,10)+'T00:00:00');
-    const end   = new Date(String(l.fecha_fin).slice(0,10)+'T00:00:00');
-    for (let d=new Date(start); d<=end; d.setDate(d.getDate()+1)) {
-      const ymd = toYMD(d);
-      (map[l.usuario_id] ||= {})[ymd] = true;
-    }
-  });
-  return map;
-}
-async function getTurnosSemanaMap(monday, sunday) {
-  // turnosSemana[usuario_id][ymd] = [{ id, inicio, fin }]
-  const { rows } = await pool.query(`
-    SELECT * FROM turnos
-     WHERE fecha BETWEEN $1 AND $2
-     ORDER BY fecha, hora_inicio
-  `, [monday, sunday]);
-  const map = {};
-  rows.forEach(t => {
-    const uid = t.usuario_id;
-    const ymd = String(t.fecha).slice(0,10);
-    (((map[uid] ||= {})[ymd]) ||= []).push({
-      id: t.id,
-      inicio: String(t.hora_inicio).slice(0,5),
-      fin:    String(t.hora_fin).slice(0,5),
-    });
+    const k = `${r.usuario_id}|${String(r.dia_semana).toLowerCase()}`;
+    if (!map.has(k)) map.set(k, []);
+    map.get(k).push({ inicio: r.hora_inicio, fin: r.hora_fin });
   });
   return map;
 }
 
-// ===== Scoring =====
-function scoreSwap({sameContract, fitsBlocks, similarDuration, overHours}) {
-  let s = 10; // bonus por ser swap (intercambio real)
-  if (fitsBlocks)      s += 8;
-  if (sameContract)    s += 5;
-  if (similarDuration) s += 3;
-  if (overHours > 0)   s -= 5 * overHours; // penalización simple por sobrehoras
-  return s;
-}
-function scoreCover({fitsBlocks, sameContract, overHours}) {
-  let s = 0;
-  if (fitsBlocks)   s += 8;
-  if (sameContract) s += 5;
-  if (overHours>0)  s -= 5 * overHours;
-  return s;
+/* ========================== Lógica de negocio ========================== */
+
+function isAvailable(dispoMap, usuarioId, fecha, inicio, fin) {
+  const k = `${usuarioId}|${dayName(fecha)}`;
+  const franjas = dispoMap.get(k) || [];
+  return franjas.some(fr => rangeWithin(inicio, fin, fr.inicio, fr.fin));
 }
 
-// ===== Servicio principal =====
-async function recomendarIntercambioService({ usuarioId, turnoOrigenId=null, fecha, hora_inicio, hora_fin }) {
-  const { monday, sunday } = weekRange(fecha);
+function summarizeHours(turnos) {
+  const acc = new Map();
+  turnos.forEach(t => {
+    const h = hoursBetween(t.hora_inicio, t.hora_fin);
+    acc.set(t.usuario_id, (acc.get(t.usuario_id) || 0) + h);
+  });
+  return acc;
+}
 
-  const [disp, ben, lic, turnosSemana, usuarios, userA] = await Promise.all([
+function hasOverlap(turnosUsuario, fecha, inicio, fin, ignoreId = null) {
+  return (turnosUsuario || []).some(x =>
+    x.id !== ignoreId &&
+    sameDay(x.fecha, fecha) &&
+    !(x.hora_fin <= inicio || x.hora_inicio >= fin)
+  );
+}
+
+// Cuando NO llega turno_id, intento identificar el turno real de A en DB
+function findTurnoExactoA(turnosSemana, usuarioId, fecha, inicio, fin) {
+  return (turnosSemana || []).find(t =>
+    t.usuario_id === usuarioId &&
+    sameDay(t.fecha, fecha) &&
+    t.hora_inicio === inicio &&
+    t.hora_fin === fin
+  ) || null;
+}
+
+/* ========================== Servicio principal ========================== */
+
+async function recomendarIntercambioService({
+  usuarioId,           // A
+  turnoOrigenId = null,
+  fecha,               // 'YYYY-MM-DD'
+  hora_inicio,
+  hora_fin
+}) {
+  const debug = { pasos: [], descartes: {}, notas: [] };
+
+  if (!fecha || !hora_inicio || !hora_fin) {
+    throw new Error('Faltan fecha/hora_inicio/hora_fin');
+  }
+
+  const { start, end } = getWeekRange(fecha);
+  debug.pasos.push({ semana: { start, end } });
+
+  const [usuariosMap, turnosSemana, dispoMap] = await Promise.all([
+    getUsuariosMap(),
+    getTurnosSemana({ start, end }),
     getDisponibilidades(),
-    getBeneficiosMap(),
-    getLicenciasRangoMap(),
-    getTurnosSemanaMap(monday, sunday),
-    getUsuariosExcept(usuarioId),
-    getUserById(usuarioId)
   ]);
 
-  const turnoA = turnoOrigenId ? await getTurnoById(turnoOrigenId)
-                               : { id:null, usuario_id:usuarioId, fecha, hora_inicio, hora_fin };
+  // Map turnos por usuario
+  const turnosByUser = new Map();
+  turnosSemana.forEach(t => {
+    if (!turnosByUser.has(t.usuario_id)) turnosByUser.set(t.usuario_id, []);
+    turnosByUser.get(t.usuario_id).push(t);
+  });
 
-  // 1) Regla: no permitir acción si el turno ya inició (o es demasiado próximo)
-  const now = new Date();
-  const startA = new Date(`${fecha}T${String(hora_inicio).slice(0,5)}:00`);
-  if (now >= startA) {
-    return { swaps: [], coberturas: [], motivoBloqueo: 'El turno ya fue iniciado o está muy próximo.' };
+  // Determino turno A (real si puedo)
+  let turnoA = null;
+  if (turnoOrigenId) {
+    turnoA = turnosSemana.find(t => t.id === Number(turnoOrigenId)) || null;
+  }
+  if (!turnoA) {
+    const encontrado = findTurnoExactoA(turnosSemana, usuarioId, fecha, hora_inicio, hora_fin);
+    if (encontrado) {
+      turnoA = { ...encontrado };
+    } else {
+      // Virtual (no existe en DB con ese id/horarios exactos)
+      turnoA = { id: null, usuario_id: usuarioId, fecha, hora_inicio, hora_fin };
+    }
   }
 
-  // 2) Contexto
-  const esCierre = isClosing(hora_fin);
-  const durA = durHoras(hora_inicio, hora_fin);
-  const dayLabelA = dayLabelFromDate(fecha); // normalizado
+  // Totales semanales actuales
+  const horasSemana = summarizeHours(turnosSemana);
+
+  // Config
+  const TOL_MIN = 30; // tolerancia de duración
+
+  const coberturas = [];
   const swaps = [];
-  const covers = [];
-  const descartes = {}; // uidB -> motivo (DEBUG)
+  const vistosSwap = new Set(); // para deduplicar (uid|fechaB|inicioB|finB)
 
-  // 3) Iteración por candidatos
-  for (const userB of usuarios) {
-    const uidB = userB.id;
+  const idsCandidatos = [...usuariosMap.keys()].filter(id => id !== usuarioId);
 
-    // Día bloqueado por beneficio/licencia
-    if (ben[uidB]?.[fecha] || lic[uidB]?.[fecha]) { descartes[uidB] = 'beneficio/licencia en el día'; continue; }
+  for (const uid of idsCandidatos) {
+    const uInfo = usuariosMap.get(uid) || { nombre: `#${uid}`, horas_contrato: 999 };
 
-    // Disponibilidad de B en día de A
-    const dB = disp[uidB]?.[dayLabelA];
-    if (!dB) { descartes[uidB] = 'sin disponibilidad ese día'; continue; }
+    // ¿B puede hacer el turno de A?
+    const bPuedeTurnoA = isAvailable(dispoMap, uid, turnoA.fecha, turnoA.hora_inicio, turnoA.hora_fin);
 
-    // Permitir ±TOLERANCIA_MIN de diferencia con la franja
-    if ((parseHM(dB.inicio) - TOLERANCIA_MIN) > parseHM(hora_inicio) ||
-        (parseHM(dB.fin)   + TOLERANCIA_MIN) < parseHM(hora_fin)) {
-      descartes[uidB] = `no cubre rango (disp ${dB.inicio}-${dB.fin} vs turno ${hora_inicio}-${hora_fin})`;
-      continue;
-    }
-
-    // Cierre → requiere puede_cerrar
-    if (esCierre && !userB.puede_cerrar) { descartes[uidB] = 'cierre y B no puede_cerrar'; continue; }
-
-    // B ya tiene turnos ese día de A?
-    const turnosB_enDiaA = (turnosSemana[uidB]?.[fecha]) || [];
-    const solapa = turnosB_enDiaA.some(t => overlaps(hora_inicio, hora_fin, t.inicio, t.fin));
-
-    // 4) Intento SWAP: buscar un turno de B otro día que A NO trabaje y A pueda cubrir
-    let posibleSwap = null;
-    for (const ymd of Object.keys(turnosSemana[uidB] || {})) {
-      if (ymd === fecha) continue; // evitamos mismo día (swap entre días distintos)
-      const A_tieneTurnoEseDia = (turnosSemana[usuarioId]?.[ymd] || []).length > 0;
-      if (A_tieneTurnoEseDia) continue;
-
-      const dayLabelSwap = dayLabelFromDate(ymd);
-      const dispA = disp[usuarioId]?.[dayLabelSwap];
-      if (!dispA) continue;
-
-      for (const tb of (turnosSemana[uidB][ymd] || [])) {
-        if (ben[usuarioId]?.[ymd] || lic[usuarioId]?.[ymd]) continue;
-
-        // A debe cubrir el turno de B con tolerancia
-        if ((parseHM(dispA.inicio) - TOLERANCIA_MIN) > parseHM(tb.inicio) ||
-            (parseHM(dispA.fin)   + TOLERANCIA_MIN) < parseHM(tb.fin)) {
-          continue;
-        }
-        // Si el turno de B es cierre, A debe poder cerrar
-        if (isClosing(tb.fin) && !userA.puede_cerrar) continue;
-
-        posibleSwap = { ymd, turnoB: tb };
-        break;
+    // Cobertura
+    if (bPuedeTurnoA) {
+      const hB = horasSemana.get(uid) || 0;
+      const delta = hoursBetween(turnoA.hora_inicio, turnoA.hora_fin);
+      const after = hB + delta;
+      const over = Math.max(0, Math.round(after - (uInfo.horas_contrato || 0)));
+      let score = 8;
+      const motivo = ['Puede cubrir ese día'];
+      if (over > 0) { score -= over + 3; motivo.push(`Penalización horas +${over}`); }
+      if (usuariosMap.get(usuarioId)?.horas_contrato === uInfo.horas_contrato) {
+        motivo.push('Mismo contrato');
       }
-      if (posibleSwap) break;
-    }
-
-    // 5) Scoring
-    const sameContract = Number(userB.horas_contrato) === Number(userA.horas_contrato);
-
-    const totalHorasSemanaB = Object.values(turnosSemana[uidB] || {}).flat()
-      .reduce((acc, t) => acc + durHoras(t.inicio, t.fin), 0);
-
-    let overHours = 0;
-    if (posibleSwap) {
-      const durSwap = durHoras(posibleSwap.turnoB.inicio, posibleSwap.turnoB.fin);
-      const diff = (totalHorasSemanaB - durSwap + durA) - Number(userB.horas_contrato || 0);
-      if (diff > 0) overHours = Math.ceil(diff);
-    } else {
-      const diff = (totalHorasSemanaB + durA) - Number(userB.horas_contrato || 0);
-      if (diff > 0) overHours = Math.ceil(diff);
-    }
-
-    const fitsBlocks = true; // Hook para dotación/bloques (si lo integras después)
-    const similarDuration = posibleSwap
-      ? Math.abs(durHoras(posibleSwap.turnoB.inicio, posibleSwap.turnoB.fin) - durA) <= 1
-      : false;
-
-    // 6) Ensamblado de respuestas
-    if (posibleSwap) {
-      swaps.push({
-        usuario_id: uidB,
-        nombre: userB.nombre,
-        tipo: 'swap',
-        score: scoreSwap({ sameContract, fitsBlocks, similarDuration, overHours }),
-        motivo: [
-          'Intercambio real posible',
-          sameContract ? 'Mismo contrato' : null,
-          similarDuration ? 'Duración similar' : null,
-          overHours>0 ? `Penalización horas +${overHours}` : null,
-        ].filter(Boolean).join(' • '),
-        intercambio: {
-          fechaA: fecha, inicioA: hora_inicio, finA: hora_fin,
-          fechaB: posibleSwap.ymd,
-          inicioB: posibleSwap.turnoB.inicio, finB: posibleSwap.turnoB.fin,
-          turnoDestinoId: posibleSwap.turnoB.id
-        }
-      });
-    } else if (!solapa) {
-      // Cobertura solo si NO se solapa con un turno que ya tenga ese día
-      covers.push({
-        usuario_id: uidB,
-        nombre: userB.nombre,
+      coberturas.push({
         tipo: 'cobertura',
-        score: scoreCover({ fitsBlocks, sameContract, overHours }),
-        motivo: [
-          'Puede cubrir ese día',
-          sameContract ? 'Mismo contrato' : null,
-          overHours>0 ? `Penalización horas +${overHours}` : null,
-        ].filter(Boolean).join(' • ')
+        usuario_id: uid,
+        nombre: uInfo.nombre,
+        score,
+        motivo: motivo.join(' • '),
+        fecha: turnoA.fecha,
+        hora_inicio: turnoA.hora_inicio,
+        hora_fin: turnoA.hora_fin
       });
     } else {
-      // Sin swap y con solape: descartado
-      descartes[uidB] = 'tiene turno solapado ese día';
+      debug.descartes[uid] = 'sin disponibilidad ese día';
+    }
+
+    // Intentar SWAP con cada turno de B en la semana
+    const turnosB = turnosByUser.get(uid) || [];
+    const minsA = minutesBetween(turnoA.hora_inicio, turnoA.hora_fin);
+
+    for (const tB of turnosB) {
+      // A debe poder cubrir el turno de B
+      const aPuedeB = isAvailable(dispoMap, usuarioId, tB.fecha, tB.hora_inicio, tB.hora_fin);
+      if (!aPuedeB) { debug.notas.push(`swap descartado A<->${uid}: A sin disponibilidad para la fecha destino`); continue; }
+
+      // B debe poder cubrir el turno de A
+      if (!bPuedeTurnoA) { debug.notas.push(`swap descartado A<->${uid}: B sin disponibilidad para la fecha destino`); continue; }
+
+      // Duraciones equivalentes con tolerancia
+      const minsB = minutesBetween(tB.hora_inicio, tB.hora_fin);
+      if (Math.abs(minsA - minsB) > TOL_MIN) {
+        debug.notas.push(`swap descartado A<->${uid}: duraciones distintas (A ${minsA} vs B ${minsB} min)`); 
+        continue;
+      }
+
+      // Reglas de solape: considerar que intercambiamos (quitamos sus turnos originales)
+      const turnosA = turnosByUser.get(usuarioId) || [];
+      const turnosDeB = turnosByUser.get(uid) || [];
+
+      // Si es mismo día, permitimos porque el intercambio reemplaza el turno del mismo día
+      // pero debemos evitar que A o B tengan *otro* turno adicional que genere solape.
+      if (sameDay(tB.fecha, turnoA.fecha)) {
+        const solapaA = turnosA.some(x =>
+          x.id !== (turnoA.id || -1) &&
+          sameDay(x.fecha, tB.fecha) &&
+          !(x.hora_fin <= tB.hora_inicio || x.hora_inicio >= tB.hora_fin)
+        );
+        if (solapaA) { debug.notas.push(`swap descartado A<->${uid}: A quedaría solapado el ${tB.fecha}`); continue; }
+
+        const solapaB = turnosDeB.some(x =>
+          x.id !== tB.id &&
+          sameDay(x.fecha, turnoA.fecha) &&
+          !(x.hora_fin <= turnoA.hora_inicio || x.hora_inicio >= turnoA.hora_fin)
+        );
+        if (solapaB) { debug.notas.push(`swap descartado A<->${uid}: B quedaría solapado el ${turnoA.fecha}`); continue; }
+      } else {
+        // Días distintos: A debe estar libre en fechaB (no tener otro turno) y
+        // B debe estar libre en fechaA (no tener otro turno)
+        const aTieneAlgoEnFechaB = hasOverlap(turnosA, tB.fecha, tB.hora_inicio, tB.hora_fin, null);
+        if (aTieneAlgoEnFechaB) { debug.notas.push(`swap descartado A<->${uid}: A ya tiene turno el ${fmt(toDate(tB.fecha))}`); continue; }
+
+        const bTieneAlgoEnFechaA = hasOverlap(turnosDeB, turnoA.fecha, turnoA.hora_inicio, turnoA.hora_fin, null);
+        if (bTieneAlgoEnFechaA) { debug.notas.push(`swap descartado A<->${uid}: B ya tiene turno el ${fmt(toDate(turnoA.fecha))}`); continue; }
+      }
+
+      // Deduplicar (misma persona + mismo turno B)
+      const key = `${uid}|${fmt(toDate(tB.fecha))}|${tB.hora_inicio}|${tB.hora_fin}`;
+      if (vistosSwap.has(key)) continue;
+      vistosSwap.add(key);
+
+      // Score simple
+      let score = 50;
+      if (sameDay(tB.fecha, turnoA.fecha)) score += 10; // preferimos mismo día
+      if (minsA === minsB) score += 5;
+
+      const motivo = [];
+      motivo.push(minsA === minsB ? 'Misma duración' : 'Duración similar');
+      motivo.push('Ambos disponibles');
+      if (sameDay(tB.fecha, turnoA.fecha)) motivo.push('Mismo día');
+      if (Math.max(0, Math.round((horasSemana.get(uid) || 0) + (minsA/60) - (uInfo.horas_contrato || 0))) === 0) {
+        motivo.push('Sin penalización de horas');
+      }
+
+      swaps.push({
+        tipo: 'swap',
+        usuario_id: uid,
+        nombre: uInfo.nombre,
+        score,
+        motivo: motivo.join(' • '),
+        // Para la UI:
+        intercambio: {
+          fechaB: fmt(toDate(tB.fecha)),
+          inicioB: tB.hora_inicio,
+          finB: tB.hora_fin,
+          turnoDestinoId: tB.id
+        },
+        // Para confirmar:
+        turno_origen_id: turnoA.id, // si es null, el front ya manda fecha/horas de A
+        turno_destino_id: tB.id
+      });
     }
   }
 
-  // 7) Orden
-  swaps.sort((a,b)=> b.score - a.score);
-  covers.sort((a,b)=> b.score - a.score);
+  swaps.sort((a,b) => b.score - a.score);
+  coberturas.sort((a,b) => b.score - a.score);
 
-  // 8) Respuesta
-  const resp = {
-    swaps: swaps.slice(0,10),
-    coberturas: covers.slice(0,10),
-  };
-  if (DEBUG) resp.debug = { descartes };
-  return resp;
+  return { swaps, coberturas, debug };
 }
 
 module.exports = {

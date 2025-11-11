@@ -39,6 +39,45 @@ export default function Intercambio() {
     setForm(f => ({ ...f, [name]: value }));
   };
 
+  // Normaliza fecha "YYYY-MM-DD" desde valores tipo "2025-11-12T03:00:00.000Z" o ya formateados
+  const normalizeDate = (v) => {
+    if (!v) return '';
+    // si viene objeto Date
+    if (v instanceof Date) return v.toISOString().slice(0, 10);
+    // si viene string ISO largo
+    if (typeof v === 'string' && v.includes('T')) return v.slice(0, 10);
+    // si ya viene "YYYY-MM-DD"
+    return String(v);
+  };
+
+  // Extrae datos del Turno B soportando ambos formatos de backend
+  // Nuevo:   r.intercambio = { fechaB, inicioB, finB, turnoDestinoId }
+  // Antiguo: r.turno_B_fecha, r.turno_B_inicio, r.turno_B_fin, r.turno_B_id
+  const getTurnoB = (r) => {
+    const fechaB =
+      (r?.intercambio && (r.intercambio.fechaB || r.intercambio.fecha_b)) ||
+      r?.turno_B_fecha || r?.turnoBFecha || r?.fechaB || '';
+
+    const inicioB =
+      (r?.intercambio && (r.intercambio.inicioB || r.intercambio.hora_inicio_b)) ||
+      r?.turno_B_inicio || r?.turnoBInicio || r?.inicioB || '';
+
+    const finB =
+      (r?.intercambio && (r.intercambio.finB || r.intercambio.hora_fin_b)) ||
+      r?.turno_B_fin || r?.turnoBFin || r?.finB || '';
+
+    const turnoDestinoId =
+      (r?.intercambio && r.intercambio.turnoDestinoId) ||
+      r?.turno_destino_id || r?.turno_B_id || r?.turnoBId || null;
+
+    return {
+      fechaB: normalizeDate(fechaB),
+      inicioB: inicioB || '',
+      finB: finB || '',
+      turnoDestinoId
+    };
+  };
+
   // ====== Buscar recomendaciones ======
   const onBuscar = async (e) => {
     e.preventDefault();
@@ -72,14 +111,15 @@ export default function Intercambio() {
     const uA = Number(form.usuario_id);
     const uB = cand.usuario_id;
 
+    const tB = isSwap ? getTurnoB(cand) : { fechaB: '', inicioB: '', finB: '', turnoDestinoId: null };
+
     const confirmMsg = isSwap
-      ? `Confirmar INTERCAMBIO real:\n\nA (ID ${uA}) cede su turno ${form.fecha} ${form.hora_inicio}-${form.hora_fin}\nB (${cand.nombre}) cede su turno ${cand.intercambio.fechaB} ${cand.intercambio.inicioB}-${cand.intercambio.finB}\n\n¿Deseas confirmar?`
+      ? `Confirmar INTERCAMBIO real:\n\nA (ID ${uA}) cede su turno ${form.fecha} ${form.hora_inicio}-${form.hora_fin}\nB (${cand.nombre}) cede su turno ${tB.fechaB} ${tB.inicioB}-${tB.finB}\n\n¿Deseas confirmar?`
       : `Confirmar COBERTURA:\n\nB (${cand.nombre}) cubrirá el turno de A (ID ${uA}) el ${form.fecha} ${form.hora_inicio}-${form.hora_fin}.\n\n¿Deseas confirmar?`;
 
     if (!window.confirm(confirmMsg)) return;
 
     try {
-      // *********** AQUÍ va el payload completo que me pediste ***********
       const payload = {
         tipo: isSwap ? 'swap' : 'cobertura',
         turno_origen_id: form.turno_id ? Number(form.turno_id) : null, // opcional
@@ -88,16 +128,13 @@ export default function Intercambio() {
         fecha: form.fecha,
         hora_inicio: form.hora_inicio,   // requerido si no mandas turno_origen_id
         hora_fin: form.hora_fin,         // requerido si no mandas turno_origen_id
-        ...(isSwap ? { turno_destino_id: cand.intercambio.turnoDestinoId } : {})
+        ...(isSwap ? { turno_destino_id: tB.turnoDestinoId } : {})
       };
-      // *******************************************************************
 
-      await confirmarIntercambio(payload); // no usamos 'data' para evitar warning
+      await confirmarIntercambio(payload);
       alert('✅ Intercambio/Cobertura confirmado');
-
-      // refresco historial
       listarIntercambios({}).then(r => setHistorial(r.data || [])).catch(() => {});
-    } catch (e) {
+    } catch {
       alert('❌ No se pudo confirmar');
     }
   };
@@ -106,10 +143,9 @@ export default function Intercambio() {
   return (
     <div className="intercambio-page bk-wrap">
       <header className="disp-hero">
-  <h1 className="disp-title">INTERCAMBIOS Y COBERTURAS</h1>
-  <p className="disp-sub">Gestiona cambios de turno de forma rápida y visual</p>
-</header>
-
+        <h1 className="disp-title">INTERCAMBIOS Y COBERTURAS</h1>
+        <p className="disp-sub">Gestiona cambios de turno de forma rápida y visual</p>
+      </header>
 
       {/* FORM */}
       <section className="bk-section">
@@ -178,38 +214,43 @@ export default function Intercambio() {
 
             {resp.swaps.length === 0 && <p className="empty">No hay intercambios reales esta semana.</p>}
 
-            {resp.swaps.map((r, i) => (
-              <div key={`s-${i}`} className="item">
-                <div className="item-main">
-                  <div className="who">
-                    <strong>{r.nombre}</strong> <em>({usuarioMap.get(r.usuario_id)?.horas_contrato || '?'}h)</em>
+            {resp.swaps.map((r, i) => {
+              const tB = getTurnoB(r);
+              return (
+                <div key={`s-${i}`} className="item">
+                  <div className="item-main">
+                    <div className="who">
+                      <strong>{r.nombre}</strong> <em>({usuarioMap.get(r.usuario_id)?.horas_contrato || '?'}h)</em>
+                    </div>
+                    <div className="score">
+                      <span className={`badge ${r.score >= 15 ? 'ok' : r.score >= 8 ? 'mid' : 'low'}`}>
+                        Score {r.score}
+                      </span>
+                    </div>
                   </div>
-                  <div className="score">
-                    <span className={`badge ${r.score >= 15 ? 'ok' : r.score >= 8 ? 'mid' : 'low'}`}>
-                      Score {r.score}
-                    </span>
+
+                  <div className="swap-grid">
+                    <div className="box">
+                      <span className="label">TURNO A</span>
+                      <div className="timing">{form.fecha} · {form.hora_inicio} — {form.hora_fin}</div>
+                    </div>
+                    <div className="box arrow">⇆</div>
+                    <div className="box">
+                      <span className="label">TURNO B</span>
+                      <div className="timing">
+                        {tB.fechaB ? `${tB.fechaB} · ${tB.inicioB} — ${tB.finB}` : '—'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="motivo">{r.motivo}</div>
+
+                  <div className="item-actions">
+                    <button className="btn-ghost" onClick={() => confirmar(r)}>Confirmar</button>
                   </div>
                 </div>
-
-                <div className="swap-grid">
-                  <div className="box">
-                    <span className="label">Turno A</span>
-                    <div className="timing">{form.fecha} · {form.hora_inicio} — {form.hora_fin}</div>
-                  </div>
-                  <div className="box arrow">⇆</div>
-                  <div className="box">
-                    <span className="label">Turno B</span>
-                    <div className="timing">{r.intercambio.fechaB} · {r.intercambio.inicioB} — {r.intercambio.finB}</div>
-                  </div>
-                </div>
-
-                <div className="motivo">{r.motivo}</div>
-
-                <div className="item-actions">
-                  <button className="btn-ghost" onClick={() => confirmar(r)}>Confirmar</button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* COBERTURAS */}
