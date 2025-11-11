@@ -7,7 +7,6 @@ const pool = require('../config/db.js');
 function toDate(x) {
   if (x instanceof Date) return x;
   if (typeof x === 'string') {
-    // Si viene solo 'YYYY-MM-DD' (sin 'T'), fuerzo medianoche local
     if (!x.includes('T')) return new Date(`${x}T00:00:00`);
     return new Date(x);
   }
@@ -17,7 +16,6 @@ const fmt = (d) => d.toISOString().slice(0, 10);
 
 function getWeekRange(dateStr) {
   const d = toDate(dateStr);
-  // Lunes a Domingo
   const dow = (d.getDay() + 6) % 7; // 0=lun
   const start = new Date(d); start.setDate(d.getDate() - dow);
   const end = new Date(start); end.setDate(start.getDate() + 6);
@@ -25,7 +23,6 @@ function getWeekRange(dateStr) {
 }
 
 function minutesBetween(t1, t2) {
-  // Permite 'HH:MM' o 'HH:MM:SS'
   const p = (t) => t.split(':').map(Number);
   const [h1, m1] = p(t1);
   const [h2, m2] = p(t2);
@@ -47,7 +44,6 @@ function timeInRange(t, from, to) {
   return minutesBetween(from, t) >= 0 && minutesBetween(t, to) >= 0;
 }
 function rangeWithin(aStart, aEnd, bStart, bEnd) {
-  // ¿[a] cabe dentro de [b]?
   return timeInRange(aStart, bStart, bEnd) && timeInRange(aEnd, bStart, bEnd);
 }
 
@@ -101,6 +97,23 @@ function summarizeHours(turnos) {
   return acc;
 }
 
+// NUEVO: horas y días por usuario (para descontar colación = 1h por día trabajado)
+function summarizeWeekStats(turnos) {
+  const hoursMap = new Map();
+  const daysSetMap = new Map(); // Map<usuarioId, Set<YYYY-MM-DD>>
+  turnos.forEach(t => {
+    const h = hoursBetween(t.hora_inicio, t.hora_fin);
+    hoursMap.set(t.usuario_id, (hoursMap.get(t.usuario_id) || 0) + h);
+    if (!daysSetMap.has(t.usuario_id)) daysSetMap.set(t.usuario_id, new Set());
+    daysSetMap.get(t.usuario_id).add(fmt(toDate(t.fecha)));
+  });
+  const daysCountMap = new Map();
+  for (const [uid, set] of daysSetMap.entries()) {
+    daysCountMap.set(uid, set.size);
+  }
+  return { hoursMap, daysCountMap };
+}
+
 function hasOverlap(turnosUsuario, fecha, inicio, fin, ignoreId = null) {
   return (turnosUsuario || []).some(x =>
     x.id !== ignoreId &&
@@ -150,7 +163,7 @@ async function recomendarIntercambioService({
     turnosByUser.get(t.usuario_id).push(t);
   });
 
-  // Determino turno A (real si puedo)
+  // Turno A (real si existe)
   let turnoA = null;
   if (turnoOrigenId) {
     turnoA = turnosSemana.find(t => t.id === Number(turnoOrigenId)) || null;
@@ -160,41 +173,47 @@ async function recomendarIntercambioService({
     if (encontrado) {
       turnoA = { ...encontrado };
     } else {
-      // Virtual (no existe en DB con ese id/horarios exactos)
       turnoA = { id: null, usuario_id: usuarioId, fecha, hora_inicio, hora_fin };
     }
   }
 
-  // Totales semanales actuales
+  // Totales semanales (para swaps dejamos la métrica tal cual)
   const horasSemana = summarizeHours(turnosSemana);
+
+  // NUEVO: horas efectivas = horas - días (colación 1h/día)
+  const { hoursMap: horasMapRaw, daysCountMap } = summarizeWeekStats(turnosSemana);
 
   // Config
   const TOL_MIN = 30; // tolerancia de duración
 
   const coberturas = [];
   const swaps = [];
-  const vistosSwap = new Set(); // para deduplicar (uid|fechaB|inicioB|finB)
+  const vistosSwap = new Set(); // uid|fechaB|inicioB|finB
 
   const idsCandidatos = [...usuariosMap.keys()].filter(id => id !== usuarioId);
 
   for (const uid of idsCandidatos) {
     const uInfo = usuariosMap.get(uid) || { nombre: `#${uid}`, horas_contrato: 999 };
 
-    // ¿B puede hacer el turno de A?
-    const bPuedeTurnoA = isAvailable(dispoMap, uid, turnoA.fecha, turnoA.hora_inicio, turnoA.hora_fin);
+    /* ---------- COBERTURAS (Horas extra con colación) ---------- */
+    const bTurnosSemana = turnosByUser.get(uid) || [];
+    const bLibreEseDia = !hasOverlap(bTurnosSemana, turnoA.fecha, turnoA.hora_inicio, turnoA.hora_fin, null);
+    const bDisponible = isAvailable(dispoMap, uid, turnoA.fecha, turnoA.hora_inicio, turnoA.hora_fin);
 
-    // Cobertura
-    if (bPuedeTurnoA) {
-      const hB = horasSemana.get(uid) || 0;
+    if (bLibreEseDia && bDisponible) {
+      const hRaw = horasMapRaw.get(uid) || 0;             // horas “crudas” de sus turnos
+      const dCnt = daysCountMap.get(uid) || 0;            // días con turno (colación 1h/día)
+      const horasEfectivas = hRaw - dCnt;                 // aplica descuento por colación
       const delta = hoursBetween(turnoA.hora_inicio, turnoA.hora_fin);
-      const after = hB + delta;
-      const over = Math.max(0, Math.round(after - (uInfo.horas_contrato || 0)));
-      let score = 8;
-      const motivo = ['Puede cubrir ese día'];
-      if (over > 0) { score -= over + 3; motivo.push(`Penalización horas +${over}`); }
-      if (usuariosMap.get(usuarioId)?.horas_contrato === uInfo.horas_contrato) {
-        motivo.push('Mismo contrato');
-      }
+      const afterEff = horasEfectivas + delta;            // **sin** descontar colación del nuevo día (según tu regla)
+      const extras = Math.max(0, Math.round(afterEff - (uInfo.horas_contrato || 0)));
+
+      // Score: menos extras => mejor
+      const scoreBase = 40;
+      const score = scoreBase - Math.min(20, extras);
+
+      const motivo = ['Día libre, opción con horas extras'];
+
       coberturas.push({
         tipo: 'cobertura',
         usuario_id: uid,
@@ -203,25 +222,26 @@ async function recomendarIntercambioService({
         motivo: motivo.join(' • '),
         fecha: turnoA.fecha,
         hora_inicio: turnoA.hora_inicio,
-        hora_fin: turnoA.hora_fin
+        hora_fin: turnoA.hora_fin,
+        extras_estimados: extras
       });
     } else {
-      debug.descartes[uid] = 'sin disponibilidad ese día';
+      if (!bDisponible) debug.descartes[uid] = 'sin disponibilidad ese día';
     }
 
-    // Intentar SWAP con cada turno de B en la semana
+    /* ---------- INTERCAMBIOS REALES (SIN CAMBIOS) ---------- */
     const turnosB = turnosByUser.get(uid) || [];
     const minsA = minutesBetween(turnoA.hora_inicio, turnoA.hora_fin);
 
     for (const tB of turnosB) {
-      // A debe poder cubrir el turno de B
       const aPuedeB = isAvailable(dispoMap, usuarioId, tB.fecha, tB.hora_inicio, tB.hora_fin);
       if (!aPuedeB) { debug.notas.push(`swap descartado A<->${uid}: A sin disponibilidad para la fecha destino`); continue; }
 
-      // B debe poder cubrir el turno de A
-      if (!bPuedeTurnoA) { debug.notas.push(`swap descartado A<->${uid}: B sin disponibilidad para la fecha destino`); continue; }
+      if (!isAvailable(dispoMap, uid, turnoA.fecha, turnoA.hora_inicio, turnoA.hora_fin)) {
+        debug.notas.push(`swap descartado A<->${uid}: B sin disponibilidad para la fecha destino`);
+        continue;
+      }
 
-      // 🔒 DESCARTAR SWAP TRIVIAL: mismo día y mismo horario (no aporta)
       if (sameDay(tB.fecha, turnoA.fecha) &&
           tB.hora_inicio === turnoA.hora_inicio &&
           tB.hora_fin === turnoA.hora_fin) {
@@ -229,19 +249,15 @@ async function recomendarIntercambioService({
         continue;
       }
 
-      // Duraciones equivalentes con tolerancia
       const minsB = minutesBetween(tB.hora_inicio, tB.hora_fin);
       if (Math.abs(minsA - minsB) > TOL_MIN) {
         debug.notas.push(`swap descartado A<->${uid}: duraciones distintas (A ${minsA} vs B ${minsB} min)`); 
         continue;
       }
 
-      // Reglas de solape: considerar que intercambiamos (quitamos sus turnos originales)
       const turnosA = turnosByUser.get(usuarioId) || [];
       const turnosDeB = turnosByUser.get(uid) || [];
 
-      // Si es mismo día, permitimos porque el intercambio reemplaza el turno del mismo día
-      // pero debemos evitar que A o B tengan *otro* turno adicional que genere solape.
       if (sameDay(tB.fecha, turnoA.fecha)) {
         const solapaA = turnosA.some(x =>
           x.id !== (turnoA.id || -1) &&
@@ -257,8 +273,6 @@ async function recomendarIntercambioService({
         );
         if (solapaB) { debug.notas.push(`swap descartado A<->${uid}: B quedaría solapado el ${turnoA.fecha}`); continue; }
       } else {
-        // Días distintos: A debe estar libre en fechaB (no tener otro turno) y
-        // B debe estar libre en fechaA (no tener otro turno)
         const aTieneAlgoEnFechaB = hasOverlap(turnosA, tB.fecha, tB.hora_inicio, tB.hora_fin, null);
         if (aTieneAlgoEnFechaB) { debug.notas.push(`swap descartado A<->${uid}: A ya tiene turno el ${fmt(toDate(tB.fecha))}`); continue; }
 
@@ -266,14 +280,12 @@ async function recomendarIntercambioService({
         if (bTieneAlgoEnFechaA) { debug.notas.push(`swap descartado A<->${uid}: B ya tiene turno el ${fmt(toDate(turnoA.fecha))}`); continue; }
       }
 
-      // Deduplicar (misma persona + mismo turno B)
       const key = `${uid}|${fmt(toDate(tB.fecha))}|${tB.hora_inicio}|${tB.hora_fin}`;
       if (vistosSwap.has(key)) continue;
       vistosSwap.add(key);
 
-      // Score simple
       let score = 50;
-      if (sameDay(tB.fecha, turnoA.fecha)) score += 10; // preferimos mismo día
+      if (sameDay(tB.fecha, turnoA.fecha)) score += 10;
       if (minsA === minsB) score += 5;
 
       const motivo = [];
@@ -290,15 +302,13 @@ async function recomendarIntercambioService({
         nombre: uInfo.nombre,
         score,
         motivo: motivo.join(' • '),
-        // Para la UI:
         intercambio: {
           fechaB: fmt(toDate(tB.fecha)),
           inicioB: tB.hora_inicio,
           finB: tB.hora_fin,
           turnoDestinoId: tB.id
         },
-        // Para confirmar:
-        turno_origen_id: turnoA.id, // si es null, el front ya manda fecha/horas de A
+        turno_origen_id: turnoA.id,
         turno_destino_id: tB.id
       });
     }

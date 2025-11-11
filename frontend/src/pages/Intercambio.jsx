@@ -42,17 +42,12 @@ export default function Intercambio() {
   // Normaliza fecha "YYYY-MM-DD" desde valores tipo "2025-11-12T03:00:00.000Z" o ya formateados
   const normalizeDate = (v) => {
     if (!v) return '';
-    // si viene objeto Date
     if (v instanceof Date) return v.toISOString().slice(0, 10);
-    // si viene string ISO largo
     if (typeof v === 'string' && v.includes('T')) return v.slice(0, 10);
-    // si ya viene "YYYY-MM-DD"
     return String(v);
   };
 
   // Extrae datos del Turno B soportando ambos formatos de backend
-  // Nuevo:   r.intercambio = { fechaB, inicioB, finB, turnoDestinoId }
-  // Antiguo: r.turno_B_fecha, r.turno_B_inicio, r.turno_B_fin, r.turno_B_id
   const getTurnoB = (r) => {
     const fechaB =
       (r?.intercambio && (r.intercambio.fechaB || r.intercambio.fecha_b)) ||
@@ -105,34 +100,35 @@ export default function Intercambio() {
     }
   };
 
-  // ====== Confirmar (swap o cobertura) ======
+  // ====== Confirmar (solo swaps; coberturas ya no tienen botón) ======
   const confirmar = async (cand) => {
     const isSwap = cand.tipo === 'swap';
+    if (!isSwap) return; // blindaje por si se llama accidentalmente
+
     const uA = Number(form.usuario_id);
     const uB = cand.usuario_id;
+    const tB = getTurnoB(cand);
 
-    const tB = isSwap ? getTurnoB(cand) : { fechaB: '', inicioB: '', finB: '', turnoDestinoId: null };
-
-    const confirmMsg = isSwap
-      ? `Confirmar INTERCAMBIO real:\n\nA (ID ${uA}) cede su turno ${form.fecha} ${form.hora_inicio}-${form.hora_fin}\nB (${cand.nombre}) cede su turno ${tB.fechaB} ${tB.inicioB}-${tB.finB}\n\n¿Deseas confirmar?`
-      : `Confirmar COBERTURA:\n\nB (${cand.nombre}) cubrirá el turno de A (ID ${uA}) el ${form.fecha} ${form.hora_inicio}-${form.hora_fin}.\n\n¿Deseas confirmar?`;
+    const confirmMsg =
+      `Confirmar INTERCAMBIO real:\n\nA (ID ${uA}) cede su turno ${form.fecha} ${form.hora_inicio}-${form.hora_fin}\n` +
+      `B (${cand.nombre}) cede su turno ${tB.fechaB} ${tB.inicioB}-${tB.finB}\n\n¿Deseas confirmar?`;
 
     if (!window.confirm(confirmMsg)) return;
 
     try {
       const payload = {
-        tipo: isSwap ? 'swap' : 'cobertura',
-        turno_origen_id: form.turno_id ? Number(form.turno_id) : null, // opcional
+        tipo: 'swap',
+        turno_origen_id: form.turno_id ? Number(form.turno_id) : null,
         usuario_solicitante: uA,
         usuario_candidato: uB,
         fecha: form.fecha,
-        hora_inicio: form.hora_inicio,   // requerido si no mandas turno_origen_id
-        hora_fin: form.hora_fin,         // requerido si no mandas turno_origen_id
-        ...(isSwap ? { turno_destino_id: tB.turnoDestinoId } : {})
+        hora_inicio: form.hora_inicio,
+        hora_fin: form.hora_fin,
+        turno_destino_id: tB.turnoDestinoId
       };
 
       await confirmarIntercambio(payload);
-      alert('✅ Intercambio/Cobertura confirmado');
+      alert('✅ Intercambio confirmado');
       listarIntercambios({}).then(r => setHistorial(r.data || [])).catch(() => {});
     } catch {
       alert('❌ No se pudo confirmar');
@@ -253,7 +249,7 @@ export default function Intercambio() {
             })}
           </div>
 
-          {/* COBERTURAS */}
+          {/* COBERTURAS (sin botón Confirmar) */}
           <div className="card">
             <div className="card-head">
               <h3>Coberturas</h3>
@@ -278,9 +274,7 @@ export default function Intercambio() {
                 <div className="timing">{form.fecha} · {form.hora_inicio} — {form.hora_fin}</div>
                 <div className="motivo">{r.motivo}</div>
 
-                <div className="item-actions">
-                  <button className="btn-ghost" onClick={() => confirmar(r)}>Confirmar</button>
-                </div>
+                {/* Sin acciones en coberturas */}
               </div>
             ))}
           </div>
