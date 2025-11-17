@@ -7,22 +7,24 @@ const usuariosRoutes      = require('./routes/usuarios.routes');        // Impor
 const beneficiosRoutes    = require('./routes/beneficios.routes');      // Importo mis rutas de beneficios
 const turnosRoutes        = require('./routes/turnos.routes');          // Importo mis rutas de turnos
 const licenciasRoutes     = require('./routes/licencias.routes');
-const intercambiosRoutes = require('./routes/intercambios.routes.js'); // ✅
-
+const intercambiosRoutes  = require('./routes/intercambios.routes.js'); // ✅
 
 const db = require('./config/db'); // Importo la configuración de la BD
 
-app.use(express.json()); // Habilito el parseo de JSON en las peticiones
+// ⬇️ MIDDLEWARES GLOBALES
+// Aumentamos el límite del body para poder enviar horarios/HTML grandes por JSON o form
+app.use(express.json({ limit: '25mb' })); 
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use(cors());         // Habilito CORS para permitir solicitudes desde otros orígenes
 
 // Registro las rutas de mi API
-app.use('/usuarios', usuariosRoutes);           // Configuro ruta /usuarios
-app.use('/disponibilidades', disponibilidadRoutes); // Configuro ruta /disponibilidades
-app.use('/beneficios', beneficiosRoutes);       // Configuro ruta /beneficios
-app.use('/turnos', turnosRoutes);               // Configuro ruta /turnos
+app.use('/usuarios', usuariosRoutes);                // Configuro ruta /usuarios
+app.use('/disponibilidades', disponibilidadRoutes);  // Configuro ruta /disponibilidades
+app.use('/beneficios', beneficiosRoutes);            // Configuro ruta /beneficios
+app.use('/turnos', turnosRoutes);                    // Configuro ruta /turnos
 app.use('/licencias', licenciasRoutes);
 app.use('/turnos', require('./routes/turnos.routes'));
-app.use('/intercambios', intercambiosRoutes); // ✅ nueva ruta
+app.use('/intercambios', intercambiosRoutes);        // ✅ nueva ruta
 
 const PORT = process.env.PORT || 3000; // Defino el puerto del servidor
 app.listen(PORT, async () => {
