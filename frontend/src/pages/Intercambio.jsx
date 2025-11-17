@@ -39,7 +39,7 @@ export default function Intercambio() {
     setForm(f => ({ ...f, [name]: value }));
   };
 
-  // Normaliza fecha "YYYY-MM-DD" desde valores tipo "2025-11-12T03:00:00.000Z" o ya formateados
+  // Normaliza fecha "YYYY-MM-DD"
   const normalizeDate = (v) => {
     if (!v) return '';
     if (v instanceof Date) return v.toISOString().slice(0, 10);
@@ -128,6 +128,50 @@ export default function Intercambio() {
       };
 
       await confirmarIntercambio(payload);
+
+      // 🔄 Sincronizar días LIBRES (freeMap) con el swap realizado
+      try {
+        const FREE_KEY = 'freeMap';
+        const raw = localStorage.getItem(FREE_KEY) || '{}';
+        const store = JSON.parse(raw);
+
+        const removeFree = (uid, fecha) => {
+          if (!uid || !fecha) return;
+          const key = String(uid);
+          if (!store[key]) return;
+          const setFechas = new Set(store[key]);
+          setFechas.delete(fecha);
+          store[key] = Array.from(setFechas);
+          if (store[key].length === 0) delete store[key];
+        };
+
+        const addFree = (uid, fecha) => {
+          if (!uid || !fecha) return;
+          const key = String(uid);
+          const setFechas = new Set(store[key] || []);
+          setFechas.add(fecha);
+          store[key] = Array.from(setFechas);
+        };
+
+        // Situación después del swap:
+        // - A tiene turno en fechaB  -> NO libre ese día
+        // - B tiene turno en fechaA  -> NO libre ese día
+        // - A queda libre en fechaA  -> LIBRE
+        // - B queda libre en fechaB  -> LIBRE
+
+        // Quitar libres donde ahora hay turno
+        removeFree(uA, tB.fechaB);
+        removeFree(uB, form.fecha);
+
+        // Añadir libres donde ahora NO hay turno
+        addFree(uA, form.fecha);
+        addFree(uB, tB.fechaB);
+
+        localStorage.setItem(FREE_KEY, JSON.stringify(store));
+      } catch (e) {
+        console.warn('No se pudo actualizar freeMap tras el swap:', e);
+      }
+
       alert('✅ Intercambio confirmado');
       listarIntercambios({}).then(r => setHistorial(r.data || [])).catch(() => {});
     } catch {

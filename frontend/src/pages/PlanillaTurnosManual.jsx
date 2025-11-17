@@ -217,6 +217,7 @@ export default function PlanillaTurnosManual(){
   };
 
   const handleToggleEdit=()=>{ if(editing){ loadData(); setEditing(false);} else{ setEditing(true);} };
+
   const handleGeneratePy=async ()=>{
     const monday=fmtYMD(weekDates[0]);
     if(!window.confirm(`¿Generar turnos con el notebook para la semana que inicia el ${monday}?`)) return;
@@ -228,6 +229,97 @@ export default function PlanillaTurnosManual(){
     }catch(e){
       console.error(e);
       alert(e?.response?.data?.error||'Error generando con notebook.');
+    }
+  };
+
+  /* ======== NUEVO: Asignar / Quitar días libres masivamente ======== */
+  const handleToggleWeekFree = () => {
+    // ¿Hay algún día libre (free) en esta semana?
+    const hasFreeThisWeek = crews.some(c => {
+      const row = cells[c.id] || {};
+      return weekDates.some((d, idx) => row[idx]?.free);
+    });
+
+    const weekDatesStr = weekDates.map(fmtYMD);
+
+    if (!hasFreeThisWeek) {
+      // ASIGNAR LIBRES: a todos los días sin turno (Disp o No disponible),
+      // excluyendo licencias y beneficios.
+      setCells(prev => {
+        const next = { ...prev };
+        const store = JSON.parse(localStorage.getItem(FREE_KEY) || '{}');
+
+        crews.forEach(c => {
+          const uid = c.id;
+          const row = { ...(next[uid] || {}) };
+          weekDates.forEach((d, idx) => {
+            const fecha = weekDatesStr[idx];
+
+            // saltar licencias/beneficios
+            if (leaves[uid]?.[fecha]) return;
+            if (benefits[uid]?.[fecha]) return;
+
+            const current = row[idx];
+            const hasTurno = current && current.inicio && current.fin && !current.free;
+            if (hasTurno) return; // ya tiene turno asignado, no lo tocamos
+
+            // marcar como libre (aunque no haya disponibilidad)
+            row[idx] = { ...(current || {}), free: true };
+
+            const setFechas = new Set(store[uid] || []);
+            setFechas.add(fecha);
+            store[uid] = Array.from(setFechas);
+          });
+          if (Object.keys(row).length > 0) {
+            next[uid] = row;
+          }
+        });
+
+        localStorage.setItem(FREE_KEY, JSON.stringify(store));
+        return next;
+      });
+    } else {
+      // QUITAR LIBRES: todos los "LIBRE" de esta semana,
+      // volviendo a mostrar Disp / No disponible.
+      setCells(prev => {
+        const next = { ...prev };
+
+        crews.forEach(c => {
+          const uid = c.id;
+          const prevRow = prev[uid] || {};
+          const row = { ...prevRow };
+
+          weekDates.forEach((d, idx) => {
+            const cell = row[idx];
+            if (cell && cell.free) {
+              const { free, ...rest } = cell;
+              // Si no queda nada relevante, eliminamos la celda
+              if (!rest.id && !rest.inicio && !rest.fin) {
+                delete row[idx];
+              } else {
+                row[idx] = rest;
+              }
+            }
+          });
+
+          if (Object.keys(row).length === 0) {
+            delete next[uid];
+          } else {
+            next[uid] = row;
+          }
+        });
+
+        // actualizar localStorage solo sacando las fechas de esta semana
+        const store = JSON.parse(localStorage.getItem(FREE_KEY) || '{}');
+        const weekSet = new Set(weekDatesStr);
+        Object.entries(store).forEach(([uid, fechas]) => {
+          store[uid] = (fechas || []).filter(f => !weekSet.has(f));
+          if (store[uid].length === 0) delete store[uid];
+        });
+        localStorage.setItem(FREE_KEY, JSON.stringify(store));
+
+        return next;
+      });
     }
   };
 
@@ -318,6 +410,12 @@ export default function PlanillaTurnosManual(){
           <button className="bk-btn" onClick={handleToggleEdit}>{editing?'Cancelar':'Editar'}</button>
           {editing && <button className="bk-btn primary" onClick={saveAll}>Guardar Cambios</button>}
           <button className="bk-btn" onClick={handleGeneratePy}>Generar (Notebook)</button>
+          {/* NUEVO BOTÓN: asignar / quitar días libres */}
+          <button className="bk-btn" onClick={handleToggleWeekFree}>
+            {/* El texto real se decide por si hay libres o no */}
+            {/* No usamos estado extra; el handler decide internamente */}
+            Asignar / Quitar días libres
+          </button>
         </div>
         <div className="right">
           <button className="bk-btn danger" onClick={handleClearTable}>Limpiar tabla</button>
