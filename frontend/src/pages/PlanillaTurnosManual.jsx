@@ -8,7 +8,9 @@ import {
   getTurnosPorFecha,
   eliminarTodosTurnos,
   enviarCalendario,
-  generarPython
+  generarPython,
+  previewPython,     // ⬅️ NUEVO
+  commitPython       // ⬅️ NUEVO
 } from '../api/turnos';
 import { getUsuarios } from '../api/usuarios';
 import { getDisponibilidades } from '../api/disponibilidades';
@@ -218,23 +220,39 @@ export default function PlanillaTurnosManual(){
 
   const handleToggleEdit=()=>{ if(editing){ loadData(); setEditing(false);} else{ setEditing(true);} };
 
+  // === NUEVO: generar notebook + importar automáticamente a BD y recargar planilla ===
   const handleGeneratePy=async ()=>{
     const monday=fmtYMD(weekDates[0]);
-    if(!window.confirm(`¿Generar turnos con el notebook para la semana que inicia el ${monday}?`)) return;
+    if(!window.confirm(`¿Generar turnos con el notebook para la semana que inicia el ${monday} y guardarlos en la BD?`)) return;
     try{
-      const r=await generarPython(monday);
-      alert(`Generado con notebook.\nSalida: ${r.out}\nTurnos insertados: ${r.detalle?.inserted||0}`);
+      // 1) Ejecutar notebook (igual que en HorariosPage)
+      await generarPython(monday);
+
+      // 2) Leer todos los items de los Excel de salida
+      const { data } = await previewPython(monday);
+      const items = Array.isArray(data) ? data : (data?.items || []);
+      if(!items.length){
+        alert('Notebook ejecutado, pero no se encontraron filas en los Excel de salida.');
+        return;
+      }
+
+      // 3) Guardar directamente en BD (mismo endpoint que HorariosPage)
+      const resp = await commitPython(items);
+      const inserted = resp?.data?.inserted ?? 0;
+
+      // 4) Recargar planilla desde la BD
       await loadData();
       setEditing(false);
+
+      alert(`Generado con notebook.\nTurnos insertados: ${inserted}`);
     }catch(e){
       console.error(e);
-      alert(e?.response?.data?.error||'Error generando con notebook.');
+      alert(e?.response?.data?.error || e.message || 'Error generando e importando turnos.');
     }
   };
 
   /* ======== NUEVO: Asignar / Quitar días libres masivamente ======== */
   const handleToggleWeekFree = () => {
-    // ¿Hay algún día libre (free) en esta semana?
     const hasFreeThisWeek = crews.some(c => {
       const row = cells[c.id] || {};
       return weekDates.some((d, idx) => row[idx]?.free);
@@ -243,8 +261,6 @@ export default function PlanillaTurnosManual(){
     const weekDatesStr = weekDates.map(fmtYMD);
 
     if (!hasFreeThisWeek) {
-      // ASIGNAR LIBRES: a todos los días sin turno (Disp o No disponible),
-      // excluyendo licencias y beneficios.
       setCells(prev => {
         const next = { ...prev };
         const store = JSON.parse(localStorage.getItem(FREE_KEY) || '{}');
@@ -255,15 +271,13 @@ export default function PlanillaTurnosManual(){
           weekDates.forEach((d, idx) => {
             const fecha = weekDatesStr[idx];
 
-            // saltar licencias/beneficios
             if (leaves[uid]?.[fecha]) return;
             if (benefits[uid]?.[fecha]) return;
 
             const current = row[idx];
             const hasTurno = current && current.inicio && current.fin && !current.free;
-            if (hasTurno) return; // ya tiene turno asignado, no lo tocamos
+            if (hasTurno) return;
 
-            // marcar como libre (aunque no haya disponibilidad)
             row[idx] = { ...(current || {}), free: true };
 
             const setFechas = new Set(store[uid] || []);
@@ -279,8 +293,6 @@ export default function PlanillaTurnosManual(){
         return next;
       });
     } else {
-      // QUITAR LIBRES: todos los "LIBRE" de esta semana,
-      // volviendo a mostrar Disp / No disponible.
       setCells(prev => {
         const next = { ...prev };
 
@@ -293,7 +305,6 @@ export default function PlanillaTurnosManual(){
             const cell = row[idx];
             if (cell && cell.free) {
               const { free, ...rest } = cell;
-              // Si no queda nada relevante, eliminamos la celda
               if (!rest.id && !rest.inicio && !rest.fin) {
                 delete row[idx];
               } else {
@@ -309,7 +320,6 @@ export default function PlanillaTurnosManual(){
           }
         });
 
-        // actualizar localStorage solo sacando las fechas de esta semana
         const store = JSON.parse(localStorage.getItem(FREE_KEY) || '{}');
         const weekSet = new Set(weekDatesStr);
         Object.entries(store).forEach(([uid, fechas]) => {
@@ -410,10 +420,7 @@ export default function PlanillaTurnosManual(){
           <button className="bk-btn" onClick={handleToggleEdit}>{editing?'Cancelar':'Editar'}</button>
           {editing && <button className="bk-btn primary" onClick={saveAll}>Guardar Cambios</button>}
           <button className="bk-btn" onClick={handleGeneratePy}>Generar (Notebook)</button>
-          {/* NUEVO BOTÓN: asignar / quitar días libres */}
           <button className="bk-btn" onClick={handleToggleWeekFree}>
-            {/* El texto real se decide por si hay libres o no */}
-            {/* No usamos estado extra; el handler decide internamente */}
             Asignar / Quitar días libres
           </button>
         </div>

@@ -5,18 +5,20 @@ html, body, #root {
   height: 100%;
   margin: 0;
   padding: 0;
-  background: #7f2f21; /* color del afiche de fondo por defecto */
+  /* MISMO COLOR QUE EL INTERIOR (café profundo) */
+  background: #5b2216; /* <- antes era #7f2f21 */
 }
 
 /* ===== Tokens ===== */
 :root{
-  --bk-bg: #7f2f21;          /* rojo tierra del fondo */
-  --cream: #f3e1c6;          /* crema de tarjetas y franja */
-  --brown: #5a2a18;          /* bordes gruesos */
+  /* Usamos el mismo café profundo como color base global */
+  --bk-bg: #5b2216;
+  --cream: #f3e1c6;
+  --brown: #5a2a18;
   --shadow: 0 10px 24px rgba(29, 8, 2, .25);
 
-  --ketchup: #d4472c;        /* botón primario */
-  --cheese:  #f2b12f;        /* acento (hover, badges) */
+  --ketchup: #d4472c;
+  --cheese:  #f2b12f;
 
   --radius-lg: 18px;
   --radius-md: 14px;
@@ -28,9 +30,13 @@ html, body, #root {
   color: #2a1a12;
   font-family: "Nunito", sans-serif;
 
-  /* Fondo uniforme y suave — sin división visible */
+  /* Fondo usando SIEMPRE el mismo café, con un leve sombreado encima */
   background:
-    radial-gradient(1200px 800px at 50% 0%, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0) 65%),
+    radial-gradient(
+      1200px 800px at 50% 0%,
+      rgba(0,0,0,0.18) 0%,
+      rgba(0,0,0,0) 65%
+    ),
     var(--bk-bg);
 }
 
@@ -38,7 +44,7 @@ html, body, #root {
 .home-header{
   position: relative;
   padding: clamp(18px, 3vw, 26px);
-  background: linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,0)) , var(--bk-bg);
+  background: linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,0)), var(--bk-bg);
   border-bottom: 6px solid var(--brown);
 }
 
@@ -51,27 +57,24 @@ html, body, #root {
   margin: 0 auto;
 }
 
-/* ===== LOGO + BADGE (forma tipo pan) ===== */
+/* ===== LOGO + BADGE ===== */
 .logo-wrap{
   position: relative;
   width: clamp(160px, 28vw, 250px);
   display: inline-block;
 }
 
-/* Badge detrás del logo: forma orgánica (no rectangular) */
 .logo-badge{
   position: absolute;
-  inset: -12% -10% -16% -10%;     /* margen alrededor del logo */
+  inset: -12% -10% -16% -10%;
   background: var(--cream);
   border: 6px solid var(--brown);
-  /* mezcla de radios para un “pan” más natural */
   border-radius: 48% 48% 40% 40% / 55% 55% 38% 38%;
   box-shadow: var(--shadow);
   filter: drop-shadow(0 4px 0 rgba(0,0,0,.12));
   z-index: 0;
 }
 
-/* Imagen del logo encima del badge */
 .bk-logo{
   position: relative;
   z-index: 1;
@@ -81,7 +84,7 @@ html, body, #root {
   image-rendering: -webkit-optimize-contrast;
 }
 
-/* ===== Título grueso tipo afiche ===== */
+/* ===== Título ===== */
 .poster-title{
   margin: 0;
   font-family: "Alfa Slab One", serif;
@@ -98,7 +101,7 @@ html, body, #root {
   letter-spacing: .4px;
 }
 
-/* ===== CTAs (colores como antes) ===== */
+/* ===== CTAs ===== */
 .poster-cta{
   display:flex; gap: 10px; flex-wrap: wrap;
 }
@@ -114,27 +117,24 @@ html, body, #root {
 }
 .btn:active{ transform: translateY(1px); }
 
-/* “Ver Horarios” (ketchup) */
 .btn-ketchup{
-  background: #ffffff;      /* color del hover antes → ahora color base */
+  background: #ffffff;
   color: #fff7ec;
   border-color: #5a2a18;
   box-shadow: 0 4px 0 #5a2a18;
 }
 .btn-ketchup:hover{
-  filter: brightness(1.08); /* brillo suave, sin cambiar el color */
+  filter: brightness(1.08);
 }
 
-
-/* Botón “Intercambio de Turnos” — Crema + borde marrón */
 .btn-ghost{
-  background: #e8d4b8;     /* el color hover anterior → ahora color base */
+  background: #e8d4b8;
   color: #5a2a18;
   border-color: #5a2a18;
   box-shadow: 0 4px 0 #5a2a18;
 }
 .btn-ghost:hover{
-  filter: brightness(1.06); /* pequeño brillo, pero SIN cambiar color */
+  filter: brightness(1.06);
 }
 
 /* ===== Grid de accesos ===== */
@@ -208,26 +208,48 @@ html, body, #root {
   .home-grid{ grid-template-columns: 1fr; }
 }
 
-/* ===== Botones de la cabecera (colores fijos) ===== */
+/* ===== Botones cabecera (colores fijos) ===== */
 .home .poster-cta .btn-ketchup{
-  background: #b63b25 !important;   /* rojo fuerte SIEMPRE */
+  background: #b63b25 !important;
   color: #fff7ec !important;
   border-color: #5a2a18 !important;
   box-shadow: 0 4px 0 #5a2a18 !important;
 }
 .home .poster-cta .btn-ketchup:hover{
-  background: #b63b25 !important;   /* no cambia el color */
-  filter: brightness(1.08);          /* solo un brillo suave */
+  background: #b63b25 !important;
+  filter: brightness(1.08);
 }
 
 .home .poster-cta .btn-ghost{
-  background: #e8d4b8 !important;   /* crema tostado SIEMPRE */
+  background: #e8d4b8 !important;
   color: #5a2a18 !important;
   border-color: #5a2a18 !important;
   box-shadow: 0 4px 0 #5a2a18 !important;
 }
 .home .poster-cta .btn-ghost:hover{
-  background: #e8d4b8 !important;   /* no cambia el color */
+  background: #e8d4b8 !important;
   color: #5a2a18 !important;
   filter: brightness(1.06);
+}
+
+
+
+/* === FORZAR FONDO ÚNICO EN TODA LA HOME === */
+
+/* 1) Todo el viewport con el mismo color */
+html, body, #root, .home {
+  background-color: #5b2216 !important; /* el café que usas en las otras páginas */
+  background-image: none !important;    /* quita radial-gradient, etc. */
+}
+
+/* 2) Header con el mismo color, sin degradado extra */
+.home-header{
+  background-color: #5b2216 !important;
+  background-image: none !important;
+}
+
+/* 3) Footer igual (sin sombra degradada que cambie el tono) */
+.home-footer{
+  background-color: #5b2216 !important;
+  background-image: none !important;
 }

@@ -1,17 +1,23 @@
 @import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Nunito:wght@600;700;800;900&display=swap');
 
-/* Fondo y tipografía general */
-.usuarios-page{
+/* =========================
+   FONDO Y TIPOGRAFÍA GENERAL
+   ========================= */
+
+/* NO pintamos color aquí: dejamos ver el fondo global (body/#root) */
+.usuarios-page,
+.usuarios-page.bk-wrap{
   min-height: 100vh;
   color: #2a1a12;
   font-family: "Nunito", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  background:
-    radial-gradient(1200px 800px at 50% 0%, rgba(0,0,0,0.14) 0%, rgba(0,0,0,0) 65%),
-    var(--bk-bg); /* mismo fondo que Home */
+  background: transparent !important;   /* <-- clave */
   padding: 16px;
 }
 
-/* Encabezado con título Alfa Slab One */
+/* =========================
+   HEADER
+   ========================= */
+
 .usuarios-toolbar{
   max-width: 1100px;
   margin: 0 auto 14px;
@@ -35,7 +41,10 @@
   letter-spacing: .3px;
 }
 
-/* Tarjeta contenedora (misma caja que en Home) */
+/* =========================
+   TARJETA CONTENEDORA
+   ========================= */
+
 .usuarios-card{
   max-width: 1100px;
   margin: 0 auto 16px;
@@ -46,7 +55,10 @@
   padding: 16px;
 }
 
-/* Alerta error */
+/* =========================
+   ALERTA ERROR
+   ========================= */
+
 .alert-error{
   max-width: 1100px;
   margin: 0 auto 12px;
@@ -59,7 +71,10 @@
   box-shadow: inset 0 1px 0 rgba(255,255,255,.35);
 }
 
-/* Tabla BK */
+/* =========================
+   TABLA BK
+   ========================= */
+
 .usuarios-table{
   width: 100%;
   border-collapse: collapse;
@@ -87,7 +102,10 @@
   background: #fff7ec;
 }
 
-/* Inputs inline */
+/* =========================
+   INPUTS INLINE
+   ========================= */
+
 .in{
   width: 100%;
   background: #fff7ec;
@@ -104,19 +122,45 @@
   box-shadow: 0 0 0 4px rgba(207,156,99,.25);
 }
 
-/* Checkbox + badges */
-.chk{ display: inline-flex; align-items: center; gap: 8px; font-weight: 800; color: #3b2418; }
+/* =========================
+   CHECKBOX + BADGES
+   ========================= */
+
+.chk{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  color: #3b2418;
+}
 .badge-ok{
-  display:inline-block; padding: 3px 10px; border-radius:999px;
-  background: #4ea149; color:#fff; font-weight:900; font-size:12px;
+  display:inline-block;
+  padding: 3px 10px;
+  border-radius:999px;
+  background: #4ea149;
+  color:#fff;
+  font-weight:900;
+  font-size:12px;
 }
 .badge-warn{
-  display:inline-block; padding: 3px 10px; border-radius:999px;
-  background: #b77b2c; color:#fff; font-weight:900; font-size:12px;
+  display:inline-block;
+  padding: 3px 10px;
+  border-radius:999px;
+  background: #b77b2c;
+  color:#fff;
+  font-weight:900;
+  font-size:12px;
 }
 
-/* Botones */
-.row-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+/* =========================
+   BOTONES
+   ========================= */
+
+.row-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
 
 .btn{
   background: var(--ketchup);
@@ -133,7 +177,10 @@
 .btn:hover{ filter: brightness(1.04); }
 .btn:active{ transform: translateY(1px); }
 
-.btn-primary{ background: var(--ketchup); color:#fff7ec; }
+.btn-primary{
+  background: var(--ketchup);
+  color:#fff7ec;
+}
 .btn-secondary{
   background: var(--cream);
   color: #3b2418;
@@ -144,64 +191,25 @@
   color: #3b2418;
   border-color: var(--brown);
 }
-.btn-danger{ background:#c0392b; color:#fff; border-color:#5a1c14; }
+.btn-danger{
+  background:#c0392b;
+  color:#fff;
+  border-color:#5a1c14;
+}
 .btn-chip{
-  background:#ffe5bf; color:#3b2418; border-color:#5a2a18;
+  background:#ffe5bf;
+  color:#3b2418;
+  border-color:#5a2a18;
 }
-.btn.small{ padding: 8px 12px; font-weight: 800; }
-
-/* Panel expandible */
-.info-row td{ background: transparent; padding: 0; }
-.info-panel{
-  display: grid; grid-template-columns: 220px 1fr; gap: 14px;
-  padding: 14px;
-  background: #fffaf1;
-  border: 2px dashed #e7c9a3;
-  border-radius: 14px;
+.btn.small{
+  padding: 8px 12px;
+  font-weight: 800;
 }
-.info-photo{ display:grid; gap:8px; align-content:start; }
-.photo-placeholder{
-  height: 150px; border-radius: 12px;
-  border: 2px dashed #cf9c63;
-  display:flex; align-items:center; justify-content:center;
-  color:#3b2418; background:#fff7ec; font-weight:900;
-}
-.info-data h3{ margin:0 0 8px; color:#3b2418; font-weight:900; }
-
-.kv{
-  display: grid; grid-template-columns: 180px 1fr; gap: 10px;
-  padding: 10px 12px;
-  background: #fff7ec;
-  border: 2px solid #e7c9a3;
-  border-radius: 12px;
-  margin-bottom: 8px;
-}
-.kv span{ color:#3b2418; font-weight:900; }
-
-/* Responsive */
-@media (max-width: 900px){
-  .usuarios-table thead{ display:none; }
-  .usuarios-table, .usuarios-table tbody, .usuarios-table tr, .usuarios-table td{ display:block; width:100%; }
-  .usuarios-table tr{ margin-bottom:10px; border:2px solid #e7c9a3; border-radius:12px; overflow:hidden; }
-  .usuarios-table tbody td{
-    border: none; border-top: 1px solid #e7c9a3;
-    display:grid; grid-template-columns: 42% 58%; gap: 8px;
-  }
-  .usuarios-table tbody td::before{
-    content: attr(data-label);
-    font-weight:900; color:#3b2418; padding-right:8px;
-  }
-  .info-panel{ grid-template-columns: 1fr; }
-  .kv{ grid-template-columns: 1fr; }
-}
-
 
 /* =========================
    FIJAR COLORES DE BOTONES
-   (forzamos especificidad + fallbacks)
    ========================= */
 
-/* Fallbacks por si las variables aún no cargan */
 :root{
   --bk-fallback-brown: #5a2a18;
   --bk-fallback-ketchup: #d4472c;
@@ -209,7 +217,6 @@
   --bk-fallback-danger: #c43a2f;
 }
 
-/* Base botón en esta página */
 .usuarios-page .btn{
   background-clip: padding-box !important;
   border-radius: 14px !important;
@@ -221,14 +228,12 @@
   filter: none !important;
 }
 
-/* Guardar / primario (rojo BK) */
 .usuarios-page .btn-primary{
   background-color: var(--ketchup, var(--bk-fallback-ketchup)) !important;
   color: #fff7ec !important;
   border-color: var(--brown, var(--bk-fallback-brown)) !important;
 }
 
-/* Editar / Cancelar / Chip (crema con borde) */
 .usuarios-page .btn-secondary,
 .usuarios-page .btn-outline,
 .usuarios-page .btn-chip{
@@ -237,19 +242,116 @@
   border-color: var(--brown, var(--bk-fallback-brown)) !important;
 }
 
-/* Eliminar (rojo peligro) */
 .usuarios-page .btn-danger{
   background-color: var(--danger, var(--bk-fallback-danger)) !important;
   color: #fff !important;
   border-color: var(--brown, var(--bk-fallback-brown)) !important;
 }
 
-/* Ajuste del botón “Ver más” (chip redondeado alto) */
 .usuarios-page .btn-chip{
   border-radius: 16px !important;
   padding: 10px 14px !important;
 }
 
-/* Efectos */
-.usuarios-page .btn:hover{ filter: brightness(1.03) !important; }
-.usuarios-page .btn:active{ transform: translateY(1px) !important; }
+.usuarios-page .btn:hover{
+  filter: brightness(1.03) !important;
+}
+.usuarios-page .btn:active{
+  transform: translateY(1px) !important;
+}
+
+/* =========================
+   PANEL EXPANDIBLE
+   ========================= */
+
+.info-row td{
+  background: transparent;
+  padding: 0;
+}
+.info-panel{
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 14px;
+  padding: 14px;
+  background: #fffaf1;
+  border: 2px dashed #e7c9a3;
+  border-radius: 14px;
+}
+.info-photo{
+  display:grid;
+  gap:8px;
+  align-content:start;
+}
+.photo-placeholder{
+  height: 150px;
+  border-radius: 12px;
+  border: 2px dashed #cf9c63;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#3b2418;
+  background:#fff7ec;
+  font-weight:900;
+}
+.info-data h3{
+  margin:0 0 8px;
+  color:#3b2418;
+  font-weight:900;
+}
+
+.kv{
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #fff7ec;
+  border: 2px solid #e7c9a3;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+.kv span{
+  color:#3b2418;
+  font-weight:900;
+}
+
+/* =========================
+   RESPONSIVE
+   ========================= */
+
+@media (max-width: 900px){
+  .usuarios-table thead{
+    display:none;
+  }
+  .usuarios-table,
+  .usuarios-table tbody,
+  .usuarios-table tr,
+  .usuarios-table td{
+    display:block;
+    width:100%;
+  }
+  .usuarios-table tr{
+    margin-bottom:10px;
+    border:2px solid #e7c9a3;
+    border-radius:12px;
+    overflow:hidden;
+  }
+  .usuarios-table tbody td{
+    border: none;
+    border-top: 1px solid #e7c9a3;
+    display:grid;
+    grid-template-columns: 42% 58%;
+    gap: 8px;
+  }
+  .usuarios-table tbody td::before{
+    content: attr(data-label);
+    font-weight:900;
+    color:#3b2418;
+    padding-right:8px;
+  }
+  .info-panel{
+    grid-template-columns: 1fr;
+  }
+  .kv{
+    grid-template-columns: 1fr;
+  }
+}
