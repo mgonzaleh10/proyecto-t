@@ -29,7 +29,10 @@
 
 /* ====== Hero ====== */
 .lic-hero{
-  background: linear-gradient(180deg, rgba(0,0,0,.06), rgba(0,0,0,0)), #7f2f21;
+  /* ANTES:
+     background: linear-gradient(180deg, rgba(0,0,0,.06), rgba(0,0,0,0)), #7f2f21;
+     AHORA: mismo café profundo que el fondo global (#5b2216) */
+  background: #5b2216;
   border-bottom: 6px solid var(--bk-brown-900);
   padding: clamp(16px, 3vw, 26px) 16px;
 }
@@ -259,5 +262,3 @@ button.btn-danger{
   color:#fff !important;
   border: none !important;
 }
-
-

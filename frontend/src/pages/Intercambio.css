@@ -223,3 +223,19 @@
 @media (max-width:1280px){
   .intercambio-page .disp-hero{ margin-bottom:8px; }
 }
+
+
+/* === FONDO ÚNICO PARA LA PÁGINA DE INTERCAMBIOS === */
+
+/* 1) Mismo color café que el resto del sistema */
+.intercambio-page.bk-wrap{
+  background-color: #5b2216 !important;  /* café uniforme */
+  background-image: none !important;     /* sin radial ni linear-gradient */
+}
+
+/*
+.intercambio-page .disp-hero{
+  background-color: #5b2216 !important;
+  background-image: none !important;
+}
+*/
