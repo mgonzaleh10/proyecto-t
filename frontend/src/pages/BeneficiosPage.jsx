@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import { getUsuarios } from '../api/usuarios';
 import {
   getBeneficios,
@@ -71,16 +70,13 @@ export default function BeneficiosPage() {
 
   return (
     <div className="beneficios-page">
-      {/* Encabezado afiche */}
+      {/* Encabezado afiche centrado */}
       <div className="beneficios-hero">
-        <div className="hero-left">
+        <div className="hero-center">
           <h1>BENEFICIOS</h1>
           <p className="hero-sub">Cumpleaños • Administrativos • Vacaciones</p>
           <span className="hero-underline" />
         </div>
-        <Link to="/usuarios" className="link-reset">
-          <button className="btn btn-secondary btn-back">← Volver a Crews</button>
-        </Link>
       </div>
 
       {/* Selector de usuario */}

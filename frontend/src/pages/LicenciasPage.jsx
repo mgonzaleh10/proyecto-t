@@ -1,5 +1,5 @@
 // src/pages/LicenciasPage.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { getUsuarios } from "../api/usuarios";
 import {
   crearLicencia,
@@ -117,8 +117,11 @@ export default function LicenciasPage() {
   const changeFilter = (e) =>
     setFilters((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  const getUserName = (id) =>
-    usuarios.find((u) => u.id === id)?.nombre || `#${id}`;
+  // Memoizamos la función para que sea estable y no dispare warnings
+  const getUserName = useCallback(
+    (id) => usuarios.find((u) => u.id === id)?.nombre || `#${id}`,
+    [usuarios]
+  );
 
   // Lista filtrada
   const filtered = useMemo(() => {
@@ -132,7 +135,7 @@ export default function LicenciasPage() {
       const matchEstado = filters.estado === "todas" || st === filters.estado;
       return matchQ && matchDesde && matchHasta && matchEstado;
     });
-  }, [licencias, filters, usuarios]);
+  }, [licencias, filters, getUserName]);
 
   // Stats
   const stats = useMemo(() => {
@@ -170,21 +173,39 @@ export default function LicenciasPage() {
             <span className="lic-stat__label">Activas</span>
             <span className="lic-stat__value">{stats.activa}</span>
             <span className="lic-stat__bar">
-              <i style={{ width: stats.total ? `${(stats.activa / stats.total) * 100}%` : 0 }} />
+              <i
+                style={{
+                  width: stats.total
+                    ? `${(stats.activa / stats.total) * 100}%`
+                    : 0,
+                }}
+              />
             </span>
           </div>
           <div className="lic-stat">
             <span className="lic-stat__label">Próximas</span>
             <span className="lic-stat__value">{stats.futura}</span>
             <span className="lic-stat__bar">
-              <i style={{ width: stats.total ? `${(stats.futura / stats.total) * 100}%` : 0 }} />
+              <i
+                style={{
+                  width: stats.total
+                    ? `${(stats.futura / stats.total) * 100}%`
+                    : 0,
+                }}
+              />
             </span>
           </div>
           <div className="lic-stat">
             <span className="lic-stat__label">Finalizadas</span>
             <span className="lic-stat__value">{stats.finalizada}</span>
             <span className="lic-stat__bar">
-              <i style={{ width: stats.total ? `${(stats.finalizada / stats.total) * 100}%` : 0 }} />
+              <i
+                style={{
+                  width: stats.total
+                    ? `${(stats.finalizada / stats.total) * 100}%`
+                    : 0,
+                }}
+              />
             </span>
           </div>
         </section>
@@ -311,12 +332,17 @@ export default function LicenciasPage() {
                   return (
                     <tr key={l.id}>
                       <td data-label="ID">{l.id}</td>
-                      <td data-label="Usuario" className="strong">{nombre}</td>
+                      <td data-label="Usuario" className="strong">
+                        {nombre}
+                      </td>
                       <td data-label="Inicio">{fmtDate(l.fecha_inicio)}</td>
                       <td data-label="Fin">{fmtDate(l.fecha_fin)}</td>
                       <td data-label="Días">{days}</td>
                       <td data-label="Estado">
-                        <span className={`tag state--${st}`}><i />{st}</span>
+                        <span className={`tag state--${st}`}>
+                          <i />
+                          {st}
+                        </span>
                       </td>
                       <td data-label="Acciones">
                         <div className="actions">

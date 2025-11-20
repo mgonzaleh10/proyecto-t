@@ -179,6 +179,54 @@ export default function Intercambio() {
     }
   };
 
+  // ====== Datos para sección DEBUG ======
+  const debug = resp.debug || {};
+
+  const descartesEntriesRaw = debug && debug.descartes ? Object.entries(debug.descartes) : [];
+  // Ordenamos por ID de trabajador (1, 3, 4, 5, ...)
+  const descartesEntries = [...descartesEntriesRaw].sort(
+    ([idA], [idB]) => Number(idA) - Number(idB)
+  );
+
+  // Lista de notas estable
+  const notasList = useMemo(
+    () => (Array.isArray(debug.notas) ? debug.notas : []),
+    [debug.notas]
+  );
+
+  const semanaInfo =
+    Array.isArray(debug.pasos) &&
+    debug.pasos.length > 0 &&
+    debug.pasos[0].semana
+      ? debug.pasos[0].semana
+      : null;
+
+  // ✅ Transforma una nota cruda en frase amigable
+  const prettyNote = (nota) => {
+    // Ejemplos que queremos soportar:
+    // "swap descartado Ac->4: mismo día y mismo horario (intercambio trivial)"
+    // "swap descartado A<->4: A ya tiene turno el 2025-11-21"
+    //
+    // 1) Intentamos extraer el ID del otro crew (después de A... hasta el número y dos puntos)
+    const m = nota.match(/A[^0-9]*?(\d+):\s*(.+)$/i);
+    const uidB = m ? Number(m[1]) : null;
+    // 2) Razón limpia (si el regex no matchea, al menos sacamos el "swap descartado ")
+    const reasonRaw = m ? m[2] : nota.replace(/^swap descartado\s*/i, '');
+
+    const crewA = usuarioMap.get(Number(form.usuario_id));
+    const crewAName = crewA ? `${crewA.nombre} (Crew A)` : 'El trabajador A';
+
+    let crewBLabel = 'otro trabajador';
+    if (uidB != null) {
+      const crewB = usuarioMap.get(uidB);
+      crewBLabel = crewB
+        ? `${crewB.nombre} (ID ${uidB})`
+        : `el trabajador con ID ${uidB}`;
+    }
+
+    return `${crewAName} no puede hacer cambio con ${crewBLabel} porque ${reasonRaw}.`;
+  };
+
   // ====== Vista ======
   return (
     <div className="intercambio-page bk-wrap">
@@ -324,11 +372,60 @@ export default function Intercambio() {
           </div>
         </div>
 
-        {/* DEBUG opcional */}
+        {/* DEBUG bonito y con notas “humanas” */}
         {resp.debug && (
           <details className="debug">
             <summary>Ver motivos de descarte</summary>
-            <pre>{JSON.stringify(resp.debug, null, 2)}</pre>
+            <div className="debug-inner">
+              {semanaInfo && (
+                <div className="debug-section">
+                  <h4>Semana analizada</h4>
+                  <div className="debug-week">
+                    <span className="pill-week">
+                      {normalizeDate(semanaInfo.start)} &nbsp;→&nbsp; {normalizeDate(semanaInfo.end)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {descartesEntries.length > 0 && (
+                <div className="debug-section">
+                  <h4>Resumen por trabajador</h4>
+                  <div className="debug-table">
+                    {descartesEntries.map(([uid, motivo]) => {
+                      const u = usuarioMap.get(Number(uid));
+                      return (
+                        <div key={uid} className="debug-row">
+                          <span className="debug-user">
+                            <span className="debug-user-id">ID {uid}</span>
+                            {u && <span className="debug-user-name">· {u.nombre}</span>}
+                          </span>
+                          <span className="debug-reason">{motivo}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {notasList.length > 0 && (
+                <div className="debug-section">
+                  <h4>Notas detalladas</h4>
+                  <ul className="debug-notes-list pretty">
+                    {notasList.map((n, idx) => (
+                      <li key={idx}>
+                        <span className="note-bullet">•</span>
+                        <span className="note-text">{prettyNote(n)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {descartesEntries.length === 0 && notasList.length === 0 && (
+                <pre className="debug-raw">{JSON.stringify(resp.debug, null, 2)}</pre>
+              )}
+            </div>
           </details>
         )}
       </section>
