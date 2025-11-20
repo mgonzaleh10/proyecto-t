@@ -9,8 +9,8 @@ import {
   eliminarTodosTurnos,
   enviarCalendario,
   generarPython,
-  previewPython,     // ⬅️ NUEVO
-  commitPython       // ⬅️ NUEVO
+  previewPython,
+  commitPython
 } from '../api/turnos';
 import { getUsuarios } from '../api/usuarios';
 import { getDisponibilidades } from '../api/disponibilidades';
@@ -21,6 +21,9 @@ import './PlanillaTurnosManual.css';
 
 const DAY_LABELS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 const FREE_KEY   = 'freeMap';
+
+// NUEVO: clave para persistir el progreso del notebook
+const PROGRESS_KEY = 'bk_notebook_progress';
 
 function parseTime(hm){ const [h,m]=hm.split(':').map(Number); return h*60+m; }
 function fmtYMD(d){ const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; }
@@ -41,6 +44,45 @@ export default function PlanillaTurnosManual(){
   const [disps,setDisps]=useState({});
   const [benefits,setBenefits]=useState({});
   const [leaves,setLeaves]=useState({});
+
+  // === Progreso del notebook (persistente) ===
+  const [pyProgress, setPyProgress] = useState({
+    running: false,
+    step: 0,
+    total: 3,
+    label: ''
+  });
+
+  // helper para actualizar estado + localStorage a la vez
+  const updateProgress = (updater) => {
+    setPyProgress(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      try {
+        localStorage.setItem(PROGRESS_KEY, JSON.stringify(next));
+      } catch (e) {
+        // ignore
+      }
+      return next;
+    });
+  };
+
+  const pyPercent = pyProgress.running
+    ? Math.round((pyProgress.step / pyProgress.total) * 100)
+    : 0;
+
+  // Al montar, recuperar progreso guardado (por si venimos de otra ruta)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(PROGRESS_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved && typeof saved.running === 'boolean') {
+        setPyProgress(saved);
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
 
   useEffect(()=>{ getUsuarios().then(r=>setCrews(r.data)).catch(console.error); },[]);
   useEffect(()=>{
@@ -220,38 +262,46 @@ export default function PlanillaTurnosManual(){
 
   const handleToggleEdit=()=>{ if(editing){ loadData(); setEditing(false);} else{ setEditing(true);} };
 
-  // === NUEVO: generar notebook + importar automáticamente a BD y recargar planilla ===
+  // === Generar notebook + importar automáticamente a BD y recargar planilla ===
   const handleGeneratePy=async ()=>{
     const monday=fmtYMD(weekDates[0]);
     if(!window.confirm(`¿Generar turnos con el notebook para la semana que inicia el ${monday} y guardarlos en la BD?`)) return;
     try{
-      // 1) Ejecutar notebook (igual que en HorariosPage)
+      // Paso 1: ejecutar notebook
+      updateProgress({ running:true, step:1, total:3, label:'Ejecutando notebook…' });
       await generarPython(monday);
 
-      // 2) Leer todos los items de los Excel de salida
+      // Paso 2: leer Excel de salida
+      updateProgress(prev => ({ ...prev, step:2, label:'Leyendo resultados generados…' }));
       const { data } = await previewPython(monday);
       const items = Array.isArray(data) ? data : (data?.items || []);
       if(!items.length){
+        updateProgress({ running:false, step:0, total:3, label:'' });
+        localStorage.removeItem(PROGRESS_KEY);
         alert('Notebook ejecutado, pero no se encontraron filas en los Excel de salida.');
         return;
       }
 
-      // 3) Guardar directamente en BD (mismo endpoint que HorariosPage)
+      // Paso 3: guardar en BD
+      updateProgress(prev => ({ ...prev, step:3, label:'Guardando turnos en la base de datos…' }));
       const resp = await commitPython(items);
       const inserted = resp?.data?.inserted ?? 0;
 
-      // 4) Recargar planilla desde la BD
       await loadData();
       setEditing(false);
 
+      updateProgress({ running:false, step:3, total:3, label:'Completado' });
+      localStorage.removeItem(PROGRESS_KEY);
       alert(`Generado con notebook.\nTurnos insertados: ${inserted}`);
     }catch(e){
       console.error(e);
+      updateProgress({ running:false, step:0, total:3, label:'' });
+      localStorage.removeItem(PROGRESS_KEY);
       alert(e?.response?.data?.error || e.message || 'Error generando e importando turnos.');
     }
   };
 
-  /* ======== NUEVO: Asignar / Quitar días libres masivamente ======== */
+  /* ======== Asignar / Quitar días libres masivamente ======== */
   const handleToggleWeekFree = () => {
     const hasFreeThisWeek = crews.some(c => {
       const row = cells[c.id] || {};
@@ -345,6 +395,15 @@ export default function PlanillaTurnosManual(){
       return (
         <td className="tile tile--shift">
           <span className="time-row">{c.inicio} — {c.fin}</span>
+          {c?.id && (
+            <button
+              type="button"
+              className="corner-id"
+              title={`Turno ID: ${c.id}`}
+            >
+              i
+            </button>
+          )}
         </td>
       );
     }
@@ -419,7 +478,13 @@ export default function PlanillaTurnosManual(){
           </label>
           <button className="bk-btn" onClick={handleToggleEdit}>{editing?'Cancelar':'Editar'}</button>
           {editing && <button className="bk-btn primary" onClick={saveAll}>Guardar Cambios</button>}
-          <button className="bk-btn" onClick={handleGeneratePy}>Generar (Notebook)</button>
+          <button
+            className="bk-btn"
+            onClick={handleGeneratePy}
+            disabled={pyProgress.running}
+          >
+            {pyProgress.running ? 'Generando…' : 'Generar (Notebook)'}
+          </button>
           <button className="bk-btn" onClick={handleToggleWeekFree}>
             Asignar / Quitar días libres
           </button>
@@ -429,6 +494,21 @@ export default function PlanillaTurnosManual(){
           <button className="bk-btn info" onClick={handleSendEmail}>Enviar por correo</button>
         </div>
       </div>
+
+      {/* Barra de progreso del notebook */}
+      {pyProgress.running && (
+        <div className="py-progress">
+          <div className="py-progress-bar">
+            <div
+              className="py-progress-fill"
+              style={{ width: `${pyPercent}%` }}
+            />
+          </div>
+          <span className="py-progress-text">
+            {pyProgress.label} ({pyProgress.step}/{pyProgress.total}) · {pyPercent}%
+          </span>
+        </div>
+      )}
 
       <div className="planilla-table-wrap">
         <table className="planilla-table">
@@ -451,6 +531,13 @@ export default function PlanillaTurnosManual(){
                 <td className="emp-cell">
                   <span className="emp-name">{c.nombre}</span>
                   <span className="emp-badge">{horasTrabajadas(c.id)}/{c.horas_contrato}</span>
+                  <button
+                    type="button"
+                    className="corner-id"
+                    title={`Usuario ID: ${c.id}`}
+                  >
+                    i
+                  </button>
                 </td>
 
                 {weekDates.map((d,i)=>{

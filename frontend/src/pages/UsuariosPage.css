@@ -11,42 +11,56 @@
   color: #2a1a12;
   font-family: "Nunito", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   background: transparent !important;   /* <-- clave */
-  padding: 16px;
+  padding: 16px 32px;                   /* <-- un poco más ancho, menos borde rojo */
+  width: 100%;
 }
 
 /* =========================
    HEADER
    ========================= */
 
-.usuarios-toolbar{
-  max-width: 1100px;
+/* =========================
+   HEADER TIPO POSTER (IGUAL A PLANILLA)
+   ========================= */
+
+.usuarios-hero{
+  border:3px solid #6b2a18;
+  background:linear-gradient(180deg,#8e4029,#6f2d1c 55%,#5b2315);
+  border-radius:18px;
+  padding:12px 14px 8px;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.08), 0 12px 20px rgba(0,0,0,.22);
+  
   margin: 0 auto 14px;
-  display: grid;
-  gap: 6px;
-  align-items: end;
+  max-width: 1700px;       /* igual que planilla */
+  text-align:center;
 }
-.usuarios-toolbar h2{
-  margin: 0;
-  font-family: "Alfa Slab One", serif;
-  font-size: clamp(24px, 4.4vw, 42px);
-  line-height: 1;
-  color: var(--cream);
-  letter-spacing: .5px;
-  text-shadow: 0 3px 0 rgba(0,0,0,.18);
+
+.usuarios-title{
+  margin:0;
+  font-family:"Alfa Slab One", serif;
+  font-size:clamp(28px,4.6vw,56px);
+  line-height:.94;
+  color:#f3e1c6;
+  text-shadow:0 3px 0 rgba(0,0,0,.18);
+  letter-spacing:.5px;
 }
-.usuarios-sub{
-  margin: 0;
-  color: #f3e1c6;
-  font-weight: 800;
-  letter-spacing: .3px;
+
+.usuarios-subtitle{
+  margin:2px 0 0;
+  color:#f8e7cf;
+  opacity:.9;
+  font-weight:900;
+  font-size: clamp(14px, 2vw, 20px);
 }
+
 
 /* =========================
    TARJETA CONTENEDORA
    ========================= */
 
 .usuarios-card{
-  max-width: 1100px;
+  max-width: 1700px;       /* antes 1100px */
+  width: 100%;
   margin: 0 auto 16px;
   background: var(--cream);
   border: 6px solid var(--brown);
@@ -60,7 +74,8 @@
    ========================= */
 
 .alert-error{
-  max-width: 1100px;
+  max-width: 1700px;       /* antes 1100px */
+  width: 100%;
   margin: 0 auto 12px;
   background: #ffe6e3;
   border: 2px solid #ffb3a8;

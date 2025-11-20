@@ -3,7 +3,7 @@
 
 .beneficios-page{
   --bk-bg: #fff5e1;
-  --bk-card:#fff;
+  --bk-card:#f3e1c6;
   --bk-brown-900:#6a2e1f;
   --bk-brown-800:#5b2b19;
   --bk-brown-700:#8a4221;
@@ -15,72 +15,98 @@
   --bk-accent:#2e7d32;
   --bk-danger:#c0392b;
 
-  min-height:100%;
-  background:var(--bk-bg);
+  min-height:100vh;
   padding:16px;
   color:#3a2a22;
   font-family:"Nunito",system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
   box-sizing:border-box;
+
+  /* usamos el fondo global tipo Home */
+  background: transparent !important;
+  background-image: none !important;
 }
 
-/* ===== Encabezado afiche — FUERA del recuadro crema =====
-   Usamos márgenes negativos para romper el padding del page
-   y crear una franja que ahora usa el MISMO color del fondo global (#5b2216). */
+/* ===== Encabezado tipo “poster Planilla Manual” centrado ===== */
 .beneficios-hero{
-  display:flex; 
-  align-items:flex-end; 
-  justify-content:space-between;
-  margin: -16px -16px 16px;                 /* saca el título del área crema */
-  padding: 18px 16px 14px;
+  max-width:1700px;
+  margin:0 auto 16px;
 
-  /* ANTES: gradientes + #7f2f21 (rojo)
-     AHORA: mismo color café que el fondo de Home */
-  background: #5b2216;
+  border:3px solid #6b2a18;
+  background:linear-gradient(180deg,#8e4029,#6f2d1c 55%,#5b2315);
+  border-radius:18px;
+  padding:12px 16px 10px;
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.08),
+              0 12px 20px rgba(0,0,0,.22);
 
-  box-shadow: inset 0 -6px 0 #4b2718;        /* línea café inferior como “Disponibilidades” */
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
-.beneficios-hero .hero-left h1{
+.hero-center{
+  text-align:center;
+}
+
+.hero-center h1{
   margin:0;
   font-family:"Alfa Slab One", serif;
-  font-size: clamp(30px, 5vw, 56px);
+  font-size:clamp(30px,5vw,56px);
   line-height:.9;
-  color:#f3e1c6;                              /* crema */
+  color:#f3e1c6;
   text-shadow:0 3px 0 rgba(0,0,0,.2);
+  letter-spacing:.5px;
 }
-.beneficios-hero .hero-sub{
-  margin:4px 0 8px;
+
+.hero-sub{
+  margin:4px 0 4px;
   color:#f7e7cf;
   font-weight:900;
   letter-spacing:.3px;
 }
-.beneficios-hero .hero-underline{
-  display:block; height:6px; width:100%;
-  background:#4b2718; border-radius:6px;
+
+.hero-underline{
+  display:block;
+  height:5px;
+  width:100%;
+  border-radius:999px;
+  background:#4b2718;
 }
-.btn-back{ font-weight:900; }
-.link-reset{ text-decoration:none; }
 
 /* ===== Tarjetas / contenedor ===== */
 .beneficios-card{
+  max-width:1700px;
+  margin:0 auto 14px;
   background:var(--bk-card);
   border:1px solid var(--bk-brown-200);
   border-radius:14px;
   box-shadow:0 6px 18px rgba(0,0,0,.10);
-  padding:14px; margin-bottom:14px;
+  padding:14px;
 }
 
 /* ===== Selector ===== */
 .beneficios-controls{
-  display:flex; flex-wrap:wrap; align-items:end; gap:12px;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:flex-end;
+  gap:12px;
 }
-.beneficios-controls .fi{ display:flex; flex-direction:column; gap:4px; }
+.beneficios-controls .fi{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
 .beneficios-controls label{
-  font-size:12px; color:var(--bk-brown-700); font-weight:900;
+  font-size:12px;
+  color:var(--bk-brown-700);
+  font-weight:900;
 }
 .beneficios-controls select{
-  min-height:38px; padding:8px 10px; border-radius:10px;
-  background:#fff; border:1px solid var(--bk-brown-200); outline:none;
+  min-height:38px;
+  padding:8px 10px;
+  border-radius:10px;
+  background:#fff;
+  border:1px solid var(--bk-brown-200);
+  outline:none;
   transition:box-shadow .15s ease, border-color .15s ease;
 }
 .beneficios-controls select:focus{
@@ -90,52 +116,93 @@
 
 /* ===== Encabezados de sección ===== */
 .section-head{
-  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
   margin-bottom:10px;
   border-bottom:1px dashed var(--bk-brown-200);
   padding-bottom:6px;
 }
 .section-head h3{
-  margin:0; display:flex; align-items:center; gap:8px;
-  font-weight:900; color:var(--bk-brown-600); letter-spacing:.2px;
+  margin:0;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:900;
+  color:var(--bk-brown-600);
+  letter-spacing:.2px;
 }
 .s-icon{
-  display:inline-grid; place-items:center;
-  width:28px; height:28px; border-radius:8px;
-  background:var(--bk-brown-100); border:1px solid var(--bk-brown-200);
+  display:inline-grid;
+  place-items:center;
+  width:28px;
+  height:28px;
+  border-radius:8px;
+  background:var(--bk-brown-100);
+  border:1px solid var(--bk-brown-200);
 }
 .pill{
-  background:var(--bk-brown-500); color:#fff; border-radius:999px;
-  padding:3px 8px; font-size:12px; font-weight:900;
+  background:var(--bk-brown-500);
+  color:#fff;
+  border-radius:999px;
+  padding:3px 8px;
+  font-size:12px;
+  font-weight:900;
 }
 
 /* ===== Ítems compactos ===== */
 .item-row{
-  display:grid; grid-template-columns:1fr auto; align-items:center;
-  gap:10px; padding:10px 12px; margin-bottom:8px;
-  background:#fffdf8; border:1px solid var(--bk-brown-200); border-radius:10px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  margin-bottom:8px;
+  background:#fffdf8;
+  border:1px solid var(--bk-brown-200);
+  border-radius:10px;
 }
 .item-main{ font-weight:700; }
 .muted{ color:#7a5d4e; }
 
 /* Chips */
 .date-chip{
-  display:inline-block; background:var(--bk-brown-100);
-  border:1px solid var(--bk-brown-200); border-radius:999px;
-  padding:3px 8px; font-weight:800; margin-right:6px;
+  display:inline-block;
+  background:var(--bk-brown-100);
+  border:1px solid var(--bk-brown-200);
+  border-radius:999px;
+  padding:3px 8px;
+  font-weight:800;
+  margin-right:6px;
 }
 
 /* ===== Formularios en línea ===== */
 .form-inline{
-  display:grid; grid-template-columns:180px 1fr auto; gap:10px;
-  padding-top:10px; border-top:1px dashed var(--bk-brown-200); margin-top:8px;
+  display:grid;
+  grid-template-columns:180px 1fr auto;
+  gap:10px;
+  padding-top:10px;
+  border-top:1px dashed var(--bk-brown-200);
+  margin-top:8px;
 }
-.form-inline .fi{ display:flex; flex-direction:column; gap:4px; }
-.form-inline .fi label{ font-size:12px; color:var(--bk-brown-700); font-weight:900; }
+.form-inline .fi{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.form-inline .fi label{
+  font-size:12px;
+  color:var(--bk-brown-700);
+  font-weight:900;
+}
 .form-inline input[type="date"],
 .form-inline input[type="text"]{
-  background:#fff; border:1px solid var(--bk-brown-200); border-radius:10px;
-  padding:8px 10px; outline:none;
+  background:#fff;
+  border:1px solid var(--bk-brown-200);
+  border-radius:10px;
+  padding:8px 10px;
+  outline:none;
   transition:box-shadow .15s ease, border-color .15s ease;
 }
 .form-inline input:focus{
@@ -143,48 +210,90 @@
   box-shadow:0 0 0 3px rgba(184,92,45,.15);
 }
 .form-inline .grow{ grid-column:span 1; }
-.form-inline .actions{ display:flex; align-items:end; gap:8px; }
+.form-inline .actions{
+  display:flex;
+  align-items:flex-end;
+  gap:8px;
+}
 
 /* ===== Lista de vacaciones ===== */
-.vac-list{ list-style:none; padding:0; margin:0 0 8px 0; display:grid; gap:8px; }
+.vac-list{
+  list-style:none;
+  padding:0;
+  margin:0 0 8px 0;
+  display:grid;
+  gap:8px;
+}
 .vac-list li{
-  display:flex; align-items:center; justify-content:space-between; gap:8px;
-  background:#fffdf8; border:1px solid var(--bk-brown-200);
-  border-radius:10px; padding:8px 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  background:#fffdf8;
+  border:1px solid var(--bk-brown-200);
+  border-radius:10px;
+  padding:8px 12px;
 }
 
 /* ===== Botones ===== */
 .btn{
   background:var(--bk-brown-500);
   color:#fff;
-  border:none; border-radius:10px;
+  border:none;
+  border-radius:10px;
   padding:10px 14px;
-  font-weight:900; cursor:pointer;
+  font-weight:900;
+  cursor:pointer;
   transition:transform .05s ease, filter .15s ease;
 }
 .btn:hover{ filter:brightness(1.05); }
 .btn:active{ transform:translateY(1px); }
-.btn-primary{ background:var(--bk-brown-500) !important; color:#fff !important; }
+
+.btn-primary{
+  background:var(--bk-brown-500) !important;
+  color:#fff !important;
+}
 .btn-secondary{
-  background:#fff !important; color:var(--bk-brown-700) !important;
+  background:#fff !important;
+  color:var(--bk-brown-700) !important;
   border:2px solid var(--bk-brown-300) !important;
 }
-.btn-danger{ background:var(--bk-danger) !important; color:#fff !important; }
+.btn-danger{
+  background:var(--bk-danger) !important;
+  color:#fff !important;
+}
 
 /* Icon buttons */
 .btn-icon{
-  background:#fff; color:var(--bk-brown-700);
-  border:2px solid var(--bk-brown-300); border-radius:10px;
-  padding:6px 9px; cursor:pointer;
+  background:#fff;
+  color:var(--bk-brown-700);
+  border:2px solid var(--bk-brown-300);
+  border-radius:10px;
+  padding:6px 9px;
+  cursor:pointer;
   transition:transform .05s ease, filter .15s ease;
 }
 .btn-icon:hover{ filter:brightness(1.05); }
 .btn-icon:active{ transform:translateY(1px); }
-.btn-icon.btn-danger{ border-color:var(--bk-danger); color:var(--bk-danger); }
+.btn-icon.btn-danger{
+  border-color:var(--bk-danger);
+  color:var(--bk-danger);
+}
 
 /* ===== Responsive ===== */
 @media (max-width: 900px){
-  .form-inline{ grid-template-columns:1fr; }
-  .form-inline .actions{ justify-content:flex-start; }
-  .item-row{ grid-template-columns:1fr; align-items:start; }
+  .beneficios-hero{
+    padding:10px 12px;
+  }
+
+  .form-inline{
+    grid-template-columns:1fr;
+  }
+  .form-inline .actions{
+    justify-content:flex-start;
+  }
+  .item-row{
+    grid-template-columns:1fr;
+    align-items:flex-start;
+  }
 }

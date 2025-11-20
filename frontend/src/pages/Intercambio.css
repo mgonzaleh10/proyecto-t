@@ -18,9 +18,10 @@
   background:
     radial-gradient(1200px 300px at 50% -100px, var(--bk-bg2), transparent 60%),
     linear-gradient(180deg, #7e3723, #5b2216 60%, #4a1c12);
-  padding:12px;
+  padding:16px 32px;   /* <-- mejora ancho como Planilla */
   color:#2b170c;
   font-family: Nunito, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  width:100%;
 }
 
 /* ===== Cabecera (poster) ===== */
@@ -31,7 +32,7 @@
   padding:12px 14px 8px;
   box-shadow: var(--shadow-inset), var(--shadow-outer);
   margin: 0 auto 10px;
-  max-width:1180px;
+  max-width:1700px;   /* <-- antes 1180px */
 }
 .intercambio-page .disp-title{
   margin:0; text-align:center;
@@ -48,7 +49,7 @@
 
 /* ===== Sección (título barra) ===== */
 .intercambio-page .bk-section{
-  max-width:1180px;
+  max-width:1700px; /* <-- antes 1180px */
   margin: 12px auto 18px;
 }
 .intercambio-page .sec-title{
@@ -125,7 +126,7 @@
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:10px;
-  max-width:1180px;
+  max-width:1700px;  /* <-- antes 1180px */
   margin: 0 auto;
 }
 @media (max-width:1024px){ .intercambio-page .cards{ grid-template-columns:1fr; } }
@@ -193,13 +194,146 @@
 }
 .intercambio-page .box .timing{ font-weight:900; color:#2b170c; }
 
-/* Debug & error */
+/* === DEBUG BONITO === */
 .intercambio-page .debug{
-  margin-top:10px; background:#fff9f0;
-  border:2px dashed #e8d7bd;
-  padding:10px; border-radius:12px;
+  margin-top:12px;
+  background:#fff9f0;
+  border:3px solid #e8d7bd;
+  border-radius:14px;
+  padding:6px 10px 8px;
+  box-shadow:0 8px 14px rgba(0,0,0,.12);
 }
-.intercambio-page .debug summary{ cursor:pointer; font-weight:900; color:#2b170c; }
+.intercambio-page .debug summary{
+  cursor:pointer;
+  font-weight:900;
+  color:#2b170c;
+  list-style:none;
+}
+.intercambio-page .debug summary::-webkit-details-marker{
+  display:none;
+}
+.intercambio-page .debug summary::before{
+  content:'▸';
+  margin-right:6px;
+  font-size:11px;
+}
+.intercambio-page .debug[open] summary::before{
+  content:'▾';
+}
+.intercambio-page .debug-inner{
+  margin-top:6px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.intercambio-page .debug-section h4{
+  margin:0 0 4px;
+  font-size:13px;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  color:#6b4635;
+}
+.intercambio-page .debug-week{
+  display:flex;
+  align-items:center;
+}
+.intercambio-page .pill-week{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:4px 10px;
+  border-radius:999px;
+  background:#f7eddc;
+  border:2px solid #3c160c;
+  font-weight:900;
+  font-size:12px;
+  color:#2b170c;
+}
+
+/* tabla de descartes */
+.intercambio-page .debug-table{
+  border-radius:10px;
+  border:2px dashed #e0c9a7;
+  background:#fffdf7;
+  padding:6px 8px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.intercambio-page .debug-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+  padding:4px 0;
+  border-bottom:1px dashed #e6d4b7;
+}
+.intercambio-page .debug-row:last-child{
+  border-bottom:none;
+}
+.intercambio-page .debug-user{
+  font-weight:900;
+  color:#2b170c;
+  font-size:13px;
+}
+.intercambio-page .debug-user-id{
+  background:#f7eddc;
+  border-radius:999px;
+  padding:2px 8px;
+  border:2px solid #3c160c;
+  margin-right:4px;
+}
+.intercambio-page .debug-user-name{
+  font-weight:900;
+}
+.intercambio-page .debug-reason{
+  font-size:12px;
+  font-weight:800;
+  color:#6b4635;
+  max-width:60%;
+}
+
+/* notas detalladas “bonitas” */
+.intercambio-page .debug-notes-list.pretty{
+  list-style:none;
+  margin:0;
+  padding:0;
+  max-height:260px;
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+}
+.intercambio-page .debug-notes-list.pretty li{
+  background:#fffdf7;
+  border-radius:999px;
+  border:1px solid #ead8b8;
+  padding:4px 10px;
+  font-size:12px;
+  font-weight:800;
+  color:#5b3a2b;
+  display:flex;
+  align-items:flex-start;
+  gap:6px;
+}
+.intercambio-page .note-bullet{
+  font-size:10px;
+  margin-top:3px;
+}
+.intercambio-page .note-text{
+  flex:1;
+}
+
+/* fallback JSON */
+.intercambio-page .debug-raw{
+  margin:0;
+  background:#fffdf7;
+  border-radius:8px;
+  padding:6px 8px;
+  font-size:11px;
+}
+
+/* Error */
 .intercambio-page .bk-error{
   color:#b22a1c; background:#ffe8e6; border:3px solid #b22a1c;
   padding:8px 12px; border-radius:12px; font-weight:900;
@@ -224,18 +358,8 @@
   .intercambio-page .disp-hero{ margin-bottom:8px; }
 }
 
-
 /* === FONDO ÚNICO PARA LA PÁGINA DE INTERCAMBIOS === */
-
-/* 1) Mismo color café que el resto del sistema */
 .intercambio-page.bk-wrap{
-  background-color: #5b2216 !important;  /* café uniforme */
-  background-image: none !important;     /* sin radial ni linear-gradient */
-}
-
-/*
-.intercambio-page .disp-hero{
   background-color: #5b2216 !important;
   background-image: none !important;
 }
-*/

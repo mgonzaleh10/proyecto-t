@@ -81,10 +81,11 @@ export default function UsuariosPage() {
 
   return (
     <div className="usuarios-page">
-      <div className="usuarios-toolbar">
-        <h2>CREWS</h2>
-        <p className="usuarios-sub">Listado, edición y alta de personal</p>
-      </div>
+      <div className="usuarios-hero">
+  <h1 className="usuarios-title">CREWS</h1>
+  <p className="usuarios-subtitle">Listado, edición y alta de personal</p>
+</div>
+
 
       {error && <div className="alert-error">{error}</div>}
 
