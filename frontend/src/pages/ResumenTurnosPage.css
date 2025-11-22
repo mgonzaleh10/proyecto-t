@@ -1,0 +1,381 @@
+/* ====== Resumen de Turnos — Tema Burger King ====== */
+@import url('https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Nunito:wght@600;700;800;900&display=swap');
+
+.res-page{
+  --bk-bg:#fff5e1;
+  --cream:#f3e1c6;
+  --bk-brown-900:#431901;
+  --bk-brown-800:#5b2b19;
+  --bk-brown-700:#8a4221;
+  --bk-brown-600:#9b4b25;
+  --bk-brown-500:#b85c2d;
+  --bk-brown-400:#c76c34;
+  --bk-brown-300:#cf8a5d;
+  --bk-brown-200:#e5c39b;
+  --bk-brown-100:#ffeeda;
+
+  --ketchup:#d4472c;
+  --cheese:#f2b12f;
+  --danger:#c0392b;
+
+  --radius-lg:16px;
+  --radius-md:12px;
+  --shadow:0 8px 22px rgba(0,0,0,.14);
+
+  min-height:100vh;
+  font-family:"Nunito",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+
+  /* usamos el fondo global del layout */
+  background: transparent !important;
+  background-image:none !important;
+  color:#3a2320;
+}
+
+/* ===== Hero estilo banner Crews ===== */
+.res-hero{
+  max-width:1700px;
+  margin:18px auto 18px;
+  border-radius:22px;
+  border:3px solid #6b2a18;
+  padding:18px 20px 14px;
+  background:linear-gradient(180deg,#8e4029,#6f2d1c 55%,#5b2315);
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,.08),
+    0 18px 26px rgba(0,0,0,.28);
+}
+.res-hero-inner{
+  text-align:center;
+}
+.res-title{
+  margin:0;
+  font-family:"Alfa Slab One",serif;
+  font-size:clamp(30px,5vw,56px);
+  line-height:.9;
+  letter-spacing:.6px;
+  color:#fbe4c4;
+  text-shadow:0 3px 0 rgba(0,0,0,.25);
+}
+.res-sub{
+  margin:6px 0 0;
+  font-weight:900;
+  letter-spacing:.3px;
+  color:#fbead4;
+}
+
+/* ===== Layout principal ===== */
+.res-content{
+  max-width:1700px;
+  margin:0 auto 32px;
+  padding:0 10px 10px;
+  display:flex;
+  flex-direction:column;
+  gap:16px;
+  box-sizing:border-box;
+}
+
+.res-card{
+  background:#fff;
+  border-radius:var(--radius-lg);
+  border:1px solid var(--bk-brown-200);
+  box-shadow:var(--shadow);
+  padding:14px 16px;
+}
+
+/* ===== Filtros ===== */
+.res-filters{
+  padding-bottom:10px;
+}
+.res-filters-grid{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap:12px;
+}
+.fi{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.fi label{
+  font-size:12px;
+  font-weight:900;
+  color:var(--bk-brown-700);
+  letter-spacing:.25px;
+  text-transform:uppercase;
+}
+.res-filters input[type="date"]{
+  background:#fff;
+  border-radius:var(--radius-md);
+  border:1px solid var(--bk-brown-200);
+  padding:9px 10px;
+  min-height:38px;
+  outline:none;
+  font-weight:800;
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+.res-filters input[type="date"]:focus{
+  border-color:var(--bk-brown-300);
+  box-shadow:0 0 0 3px rgba(184,92,45,.18);
+}
+.fi-actions{
+  display:flex;
+  align-items:flex-end;
+}
+
+/* Botones genéricos (reaprovechamos estilos BK) */
+.btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:10px 16px;
+  border-radius:12px;
+  border:none;
+  font-weight:900;
+  letter-spacing:.3px;
+  text-transform:uppercase;
+  cursor:pointer;
+  box-shadow:var(--shadow);
+  transition:transform .05s ease, filter .15s ease, box-shadow .15s ease;
+}
+.btn:active{ transform:translateY(1px); }
+.btn-primary{
+  background:var(--ketchup);
+  color:#fff7ec;
+}
+.btn-primary:hover{
+  filter:brightness(1.04);
+  box-shadow:0 10px 24px rgba(212,71,44,.3);
+}
+
+/* Alertas */
+.res-alert{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:10px;
+  font-weight:800;
+  font-size:14px;
+}
+.res-alert--error{
+  background:#ffe6e3;
+  border:1px solid #ffb3a8;
+  color:#8c2a22;
+}
+
+/* ===== KPIs ===== */
+.res-kpis{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+}
+.kpi{
+  background:#fff;
+  border-radius:18px;
+  border:2px solid var(--bk-brown-200);
+  padding:10px 14px;
+  box-shadow:var(--shadow);
+}
+.kpi-label{
+  display:block;
+  font-size:10px;
+  letter-spacing:.2px;
+  font-weight:900;
+  text-transform:uppercase;
+  color:#8b5a35;
+}
+.kpi-value{
+  display:block;
+  margin-top:4px;
+  font-size:22px;
+  font-weight:900;
+  color:#2b160c;
+}
+
+/* ===== TOPs ===== */
+.res-tops{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:14px;
+}
+.top-card{
+  background:#fffdf7;
+  border-radius:18px;
+  border:1px solid var(--bk-brown-200);
+  box-shadow:var(--shadow);
+  padding:12px 14px;
+}
+.top-card h3{
+  margin:0 0 8px;
+  font-size:16px;
+  font-weight:900;
+  color:var(--bk-brown-700);
+}
+.top-card ol{
+  list-style:none;
+  padding:0;
+  margin:0;
+  display:grid;
+  gap:6px;
+}
+.top-card li{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  background:#fff;
+  border-radius:12px;
+  padding:6px 8px;
+  border:1px solid var(--bk-brown-200);
+}
+.top-rank{
+  font-weight:900;
+  color:var(--bk-brown-500);
+  min-width:32px;
+}
+.top-name{
+  flex:1;
+  font-weight:800;
+}
+.top-badge{
+  font-size:12px;
+  font-weight:900;
+  padding:3px 8px;
+  border-radius:999px;
+  background:var(--bk-brown-100);
+  border:1px solid var(--bk-brown-200);
+}
+.res-empty{
+  margin:4px 0 0;
+  font-size:13px;
+  color:#8b5d40;
+}
+
+/* ===== Tabla detalle (estética Crews) ===== */
+.res-table-title{
+  margin:0 0 10px;
+  font-weight:900;
+  color:var(--bk-brown-700);
+  letter-spacing:.25px;
+}
+
+.res-table-wrapper{
+  width:100%;
+  overflow:auto;
+}
+
+.res-table{
+  width:100%;
+  border-collapse:separate;
+  border-spacing:0;
+  border-radius:18px;
+  overflow:hidden;
+  box-shadow:0 4px 16px rgba(0,0,0,.15);
+}
+
+/* Encabezado con colores del header de Crews */
+.res-table thead th{
+  background:#3b1c0d;
+  color:#fff7ec;
+  padding:10px 12px;
+  text-align:left;
+  font-size:12px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.25px;
+  border-bottom:3px solid #271209;
+}
+.res-table thead th:first-child{
+  border-top-left-radius:18px;
+}
+.res-table thead th:last-child{
+  border-top-right-radius:18px;
+}
+
+/* Filas */
+.res-table tbody td{
+  padding:9px 12px;
+  border-bottom:1px solid var(--bk-brown-200);
+  background:#fffdf8;
+  font-size:14px;
+  vertical-align:middle;
+}
+.res-table tbody tr:nth-child(odd) td{
+  background:#fff7ea;
+}
+.res-table tbody tr:hover td{
+  background:#fff3dd;
+}
+.res-table tbody tr:last-child td:first-child{
+  border-bottom-left-radius:18px;
+}
+.res-table tbody tr:last-child td:last-child{
+  border-bottom-right-radius:18px;
+}
+
+.res-table td[data-label="#"]{
+  width:40px;
+  text-align:center;
+}
+.res-table .strong{
+  font-weight:900;
+  color:#3a2417;
+}
+.sub{
+  font-size:11px;
+  color:#7a5d4e;
+}
+
+/* Bloque vacío */
+.res-empty-block{
+  text-align:center;
+  font-weight:800;
+  color:#7a5d4e;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 1100px){
+  .res-kpis{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+  .res-tops{
+    grid-template-columns:1fr;
+  }
+}
+
+@media (max-width: 800px){
+  .res-filters-grid{
+    grid-template-columns:1fr;
+  }
+}
+
+@media (max-width: 700px){
+  .res-table thead{
+    display:none;
+  }
+  .res-table,
+  .res-table tbody,
+  .res-table tr,
+  .res-table td{
+    display:block;
+    width:100%;
+  }
+  .res-table tr{
+    margin-bottom:10px;
+    border-radius:14px;
+    overflow:hidden;
+    border:1px solid var(--bk-brown-200);
+  }
+  .res-table tbody td{
+    border:none;
+    border-top:1px solid var(--bk-brown-200);
+    display:grid;
+    grid-template-columns:40% 60%;
+    gap:6px;
+  }
+  .res-table tbody td::before{
+    content: attr(data-label);
+    font-weight:900;
+    color:var(--bk-brown-700);
+    text-transform:uppercase;
+    font-size:11px;
+  }
+}

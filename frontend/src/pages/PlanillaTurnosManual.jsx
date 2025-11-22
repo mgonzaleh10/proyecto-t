@@ -235,21 +235,56 @@ export default function PlanillaTurnosManual(){
     return {total,open,close};
   });
 
-  const handleSendEmail=async ()=>{
-    if(!window.confirm('¿Enviar la foto de esta planilla por correo?')) return;
-    try{
-      const tableEl=document.querySelector('.planilla-table-wrap');
-      const canvas=await html2canvas(tableEl);
-      const img=canvas.toDataURL('image/png');
-      const destinatarios=crews.map(u=>u.correo);
+  const handleSendEmail = async () => {
+    if (!window.confirm('¿Enviar la foto de esta planilla por correo?')) return;
+
+    try {
+      const tableEl = document.querySelector('.planilla-table-wrap');
+      if (!tableEl) {
+        alert('No se encontró la tabla para capturar.');
+        return;
+      }
+
+      // Guardar fondos actuales
+      const screenEl = document.querySelector('.planilla-screen');
+      const prevBodyBg   = document.body.style.backgroundColor;
+      const prevScreenBg = screenEl ? screenEl.style.backgroundColor : '';
+
+      // Fijar fondo sólido igual al del tema BK
+      const bkBg = '#6a2e1f'; // mismo café de la app
+      document.body.style.backgroundColor = bkBg;
+      if (screenEl) screenEl.style.backgroundColor = bkBg;
+
+      // Captura en alta resolución respetando colores del nodo
+      const canvas = await html2canvas(tableEl, {
+        backgroundColor: null,                        // usa los colores reales del wrap
+        scale: window.devicePixelRatio > 1 ? 2 : 1.5, // un poco más de resolución
+        useCORS: true,
+        scrollX: -window.scrollX,
+        scrollY: -window.scrollY,
+      });
+
+      // Restaurar fondos originales
+      document.body.style.backgroundColor = prevBodyBg;
+      if (screenEl) screenEl.style.backgroundColor = prevScreenBg;
+
+      const img = canvas.toDataURL('image/png');
+      const destinatarios = crews.map(u => u.correo);
+
       await enviarCalendario({
         destinatarios,
-        asunto:`Planilla Turnos ${baseDate}`,
-        html:`<h2>Planilla de Turnos - Semana del ${baseDate}</h2><img src="${img}" style="max-width:100%;" />`
+        asunto: `Planilla Turnos ${baseDate}`,
+        html: `<h2>Planilla de Turnos - Semana del ${baseDate}</h2>
+               <img src="${img}" style="max-width:100%; border-radius:12px;" />`,
       });
+
       alert('Correos enviados correctamente.');
-    }catch{ alert('Error al enviar correos.');}
+    } catch (e) {
+      console.error(e);
+      alert('Error al enviar correos.');
+    }
   };
+
 
   const handleClearTable=async ()=>{
     if(!window.confirm('¿Borrar todos los turnos y libres asignados?')) return;
