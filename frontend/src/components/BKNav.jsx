@@ -16,7 +16,6 @@ export default function BKNav() {
           <NavLink to="/beneficios" className="pill">Beneficios</NavLink>
           <NavLink to="/licencias" className="pill">Licencias</NavLink>
           <NavLink to="/resumen" className="pill">Resumen</NavLink>
-          <NavLink to="/turnos" className="pill">Turnos</NavLink>
           <NavLink to="/horarios" className="pill">Horarios</NavLink>
         </div>
       </div>

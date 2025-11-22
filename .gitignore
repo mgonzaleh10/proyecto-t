@@ -19,5 +19,10 @@ Backend/python/runtime/
 Backend/python/out/
 Backend/python/*.executed.ipynb
 
+# Salidas del notebook
+Backend/python/Carta_output.xlsx
+Backend/python/faltantes.xlsx
+
+
 # Evitar subir .vscode/ si se usa configuración local
 .vscode/
