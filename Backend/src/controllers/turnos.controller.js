@@ -279,30 +279,79 @@ const enviarCalendario = async (req, res) => {
   }
 };
 
-// GET /turnos/resumen
+// GET /turnos/resumen/listado
 const resumenTurnos = async (req, res) => {
   try {
     const { fechaInicio, fechaFin } = req.query;
+
+    if (!fechaInicio || !fechaFin) {
+      return res.status(400).json({
+        error: 'Los parámetros fechaInicio y fechaFin son obligatorios (YYYY-MM-DD).'
+      });
+    }
+
     const { rows } = await pool.query(
-      `SELECT 
-         t.usuario_id,
-         u.nombre,
-         COUNT(*)               AS total_turnos,
-         SUM((hora_fin = '23:30')::int)             AS cierres,
-         SUM((hora_inicio BETWEEN '08:00' AND '10:00')::int) AS aperturas
-       FROM turnos t
-       JOIN usuarios u ON u.id = t.usuario_id
-       WHERE fecha BETWEEN $1 AND $2
-       GROUP BY t.usuario_id, u.nombre
-       ORDER BY cierres DESC, aperturas DESC;`,
+      `
+      WITH base_turnos AS (
+        SELECT 
+          t.usuario_id,
+          u.nombre,
+          COUNT(*) AS total_turnos,
+          SUM(CASE WHEN t.hora_fin = '23:30' THEN 1 ELSE 0 END) AS cierres,
+          SUM(CASE WHEN t.hora_inicio BETWEEN '08:00' AND '10:00' THEN 1 ELSE 0 END) AS aperturas,
+          -- horas totales (en horas decimales)
+          SUM(EXTRACT(EPOCH FROM (t.hora_fin - t.hora_inicio)) / 3600.0) AS horas_totales,
+          COUNT(DISTINCT t.fecha) AS dias_distintos
+        FROM turnos t
+        JOIN usuarios u ON u.id = t.usuario_id
+        WHERE t.fecha BETWEEN $1 AND $2
+        GROUP BY t.usuario_id, u.nombre
+      ),
+      intercambios_solic AS (
+        SELECT 
+          usuario_solicitante AS usuario_id,
+          COUNT(*) AS intercambios_solicitante
+        FROM intercambios_turnos
+        WHERE fecha BETWEEN $1 AND $2
+          AND estado = 'confirmado'
+        GROUP BY usuario_solicitante
+      ),
+      intercambios_cand AS (
+        SELECT 
+          usuario_candidato AS usuario_id,
+          COUNT(*) AS intercambios_candidato
+        FROM intercambios_turnos
+        WHERE fecha BETWEEN $1 AND $2
+          AND estado = 'confirmado'
+        GROUP BY usuario_candidato
+      )
+      SELECT
+        b.usuario_id,
+        b.nombre,
+        b.total_turnos,
+        b.cierres,
+        b.aperturas,
+        b.horas_totales,
+        b.dias_distintos,
+        COALESCE(s.intercambios_solicitante, 0) AS intercambios_solicitante,
+        COALESCE(c.intercambios_candidato, 0)   AS intercambios_candidato,
+        COALESCE(s.intercambios_solicitante, 0) + COALESCE(c.intercambios_candidato, 0)
+          AS intercambios_totales
+      FROM base_turnos b
+      LEFT JOIN intercambios_solic s ON s.usuario_id = b.usuario_id
+      LEFT JOIN intercambios_cand c ON c.usuario_id = b.usuario_id
+      ORDER BY b.total_turnos DESC, b.cierres DESC, b.aperturas DESC;
+      `,
       [fechaInicio, fechaFin]
     );
+
     res.json(rows);
   } catch (error) {
     console.error('❌ Error al obtener resumen de turnos:', error);
     res.status(500).json({ error: 'Error del servidor' });
   }
 };
+
 
 module.exports = {
   registrarTurno,

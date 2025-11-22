@@ -5,7 +5,7 @@ import client from './client';
  * @param {string} fechaFin    — 'YYYY-MM-DD'
  */
 export function getResumenTurnos({ fechaInicio, fechaFin }) {
-  return client.get('/turnos/resumen', {
+  return client.get('/turnos/resumen/listado', {
     params: { fechaInicio, fechaFin }
   });
 }

@@ -1,3 +1,4 @@
+// src/pages/PlanillaTurnos.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import html2canvas from 'html2canvas';
@@ -12,7 +13,11 @@ import {
 import { getUsuarios } from '../api/usuarios';
 import { getDisponibilidades } from '../api/disponibilidades';
 import { getBeneficios } from '../api/beneficios';
+
+// Tema visual general (tiles, corner-id, etc.)
 import './PlanillaTurnosManual.css';
+// Estilos específicos SOLO para esta page
+import './PlanillaTurnos.css';
 
 const DAY_LABELS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 const FREE_KEY   = 'freeMap';
@@ -47,12 +52,12 @@ export default function PlanillaTurnos() {
   const [disps, setDisps]           = useState({});
   const [benefits, setBenefits]     = useState({});
 
-  // Cargar crews
+  /* ==================== CARGAS INICIALES ==================== */
+
   useEffect(()=>{
     getUsuarios().then(r=>setCrews(r.data)).catch(console.error);
   },[]);
 
-  // Cargar disponibilidades
   useEffect(()=>{
     getDisponibilidades().then(r=>{
       const mp = {};
@@ -60,20 +65,19 @@ export default function PlanillaTurnos() {
         const day = d.dia_semana.toLowerCase();
         mp[d.usuario_id] = mp[d.usuario_id]||{};
         mp[d.usuario_id][day] = {
-          inicio: d.hora_inicio.slice(0,5),
-          fin:    d.hora_fin.slice(0,5)
+          inicio: String(d.hora_inicio).slice(0,5),
+          fin:    String(d.hora_fin).slice(0,5)
         };
       });
       setDisps(mp);
     }).catch(console.error);
   },[]);
 
-  // Cargar beneficios
   useEffect(()=>{
     getBeneficios().then(r=>{
       const mp = {};
       r.data.forEach(b=>{
-        const f = b.fecha.slice(0,10);
+        const f = String(b.fecha).slice(0,10);
         mp[b.usuario_id] = mp[b.usuario_id]||{};
         mp[b.usuario_id][f] = b.tipo;
       });
@@ -81,126 +85,162 @@ export default function PlanillaTurnos() {
     }).catch(console.error);
   },[]);
 
-  // Recalcular semana y limpiar inputs al cambiar baseDate
+  // cuando cambia la fecha base, recalculo semana y limpio inputs
   useEffect(()=>{
     setWeekDates(getWeekDates(baseDate));
     setInputs({});
   },[baseDate]);
 
-  // Cargar turnos + libres desde localStorage
+  /* ==================== CARGAR TURNOS + LIBRES ==================== */
+
   const loadData = useCallback(async ()=>{
     const all = [];
     for(const d of weekDates){
       const f = d.toISOString().slice(0,10);
-      try{ const r = await getTurnosPorFecha(f); all.push(...r.data); }catch{}
+      try {
+        const r = await getTurnosPorFecha(f);
+        all.push(...r.data);
+      } catch {
+        // ignore
+      }
     }
+
     const m = {};
     all.forEach(t=>{
-      const idx = weekDates.findIndex(dd=>dd.toISOString().slice(0,10)===t.fecha.slice(0,10));
-      if(idx<0) return;
-      m[t.usuario_id] = m[t.usuario_id]||{};
+      const idx = weekDates.findIndex(
+        dd => dd.toISOString().slice(0,10) === String(t.fecha).slice(0,10)
+      );
+      if(idx < 0) return;
+      m[t.usuario_id] = m[t.usuario_id] || {};
       m[t.usuario_id][idx] = {
-        id: t.id,
-        inicio: t.hora_inicio.slice(0,5),
-        fin:    t.hora_fin.slice(0,5),
+        id:     t.id,
+        inicio: String(t.hora_inicio).slice(0,5),
+        fin:    String(t.hora_fin).slice(0,5),
         free:   false
       };
     });
-    const store = JSON.parse(localStorage.getItem(FREE_KEY)||'{}');
-    Object.entries(store).forEach(([uid,dates])=>{
+
+    // aplicar mapa de días libres desde localStorage
+    const store = JSON.parse(localStorage.getItem(FREE_KEY) || '{}');
+    Object.entries(store).forEach(([uid, dates])=>{
       const u = Number(uid);
       dates.forEach(ds=>{
-        const idx = weekDates.findIndex(dd=>dd.toISOString().slice(0,10)===ds);
-        if(idx>=0){
-          m[u] = m[u]||{};
-          m[u][idx] = { free:true };
+        const idx = weekDates.findIndex(dd => dd.toISOString().slice(0,10) === ds);
+        if (idx >= 0) {
+          m[u] = m[u] || {};
+          const prev = m[u][idx] || {};
+          // marcamos free pero conservamos id/inicio/fin si existían
+          m[u][idx] = { ...prev, free: true };
         }
       });
     });
+
     setCells(m);
   },[weekDates]);
+
   useEffect(()=>{ loadData(); },[loadData]);
 
-  // Prefill inputs al cambiar crewSel
+  /* ==================== PREFILL AL CAMBIAR CREW ==================== */
+
   useEffect(()=>{
-    if(!crewSel){ setInputs({}); return; }
-    const by = cells[crewSel]||{};
+    if (!crewSel) {
+      setInputs({});
+      return;
+    }
+    const by = cells[crewSel] || {};
     const ni = {};
-    weekDates.forEach((_,i)=>{
+    weekDates.forEach((_, i)=>{
       const c = by[i];
-      if(c) ni[i] = { inicio:c.inicio, fin:c.fin, free:c.free, id:c.id };
+      if (c) {
+        ni[i] = {
+          inicio: c.inicio || '',
+          fin:    c.fin || '',
+          free:   !!c.free,
+          id:     c.id
+        };
+      }
     });
     setInputs(ni);
-  },[crewSel,cells,weekDates]);
+  },[crewSel, cells, weekDates]);
 
-  // Toggle Libre
+  /* ==================== EDICIÓN DE LA SEMANA ==================== */
+
   const toggleLibre = i => {
     setInputs(prev=>{
-      const nxt = {...prev};
-      const cur = nxt[i]||{};
-      nxt[i] = { ...cur, free:!cur.free, inicio:'', fin:'' };
-      return nxt;
+      const cur = prev[i] || {};
+      return {
+        ...prev,
+        [i]: {
+          ...cur,
+          free: !cur.free,
+          // si marco libre, limpio horas visualmente
+          inicio: !cur.free ? '' : cur.inicio,
+          fin:    !cur.free ? '' : cur.fin
+        }
+      };
     });
   };
 
-  // Cambios en inputs de hora
-  const handleInput = (i,field,val) => {
+  const handleInput = (i, field, val) => {
     setInputs(prev=>({
       ...prev,
-      [i]: { ...(prev[i]||{}), [field]:val, free:false }
+      [i]: { ...(prev[i]||{}), [field]: val, free: false }
     }));
   };
 
-  // Crear/Actualizar
-  const handleSubmit = async ()=>{
-    if(!crewSel){ alert('Selecciona primero un crew.'); return; }
-    const store   = JSON.parse(localStorage.getItem(FREE_KEY)||'{}');
-    const freeSet = new Set(store[crewSel]||[]);
+  const handleSubmit = async () => {
+    if (!crewSel) {
+      alert('Selecciona primero un crew.');
+      return;
+    }
 
-    for(let i=0;i<7;i++){
-      const dat = inputs[i]||{};
+    const store   = JSON.parse(localStorage.getItem(FREE_KEY) || '{}');
+    const freeSet = new Set(store[crewSel] || []);
+
+    for (let i = 0; i < 7; i++) {
+      const dat = inputs[i] || {};
       const f   = weekDates[i].toISOString().slice(0,10);
 
-      // Salto días con beneficio
-      if(benefits[crewSel]?.[f]){
+      // beneficio → no se graba turno ni libre
+      if (benefits[crewSel]?.[f]) {
         freeSet.delete(f);
         continue;
       }
 
-      // Libre
-      if(dat.free){
+      // marcado como libre
+      if (dat.free) {
         freeSet.add(f);
-        if(dat.id) await eliminarTurno(dat.id);
+        if (dat.id) await eliminarTurno(dat.id);
         continue;
       }
-      if(freeSet.has(f)) freeSet.delete(f);
+      if (freeSet.has(f)) freeSet.delete(f);
 
-      // Sin datos → eliminar existente
-      if(!dat.inicio && !dat.fin){
-        if(dat.id) await eliminarTurno(dat.id);
+      // sin datos, elimino turno existente
+      if (!dat.inicio && !dat.fin) {
+        if (dat.id) await eliminarTurno(dat.id);
         continue;
       }
 
-      // Validación de disponibilidad
+      // validar contra disponibilidad
       const avail = disps[crewSel]?.[DAY_LABELS[i].toLowerCase()];
-      if(!avail ||
-         parseTime(dat.inicio) < parseTime(avail.inicio) ||
-         parseTime(dat.fin)    > parseTime(avail.fin)
-      ){
-        alert(`No disponible el ${DAY_LABELS[i]} (${avail?.inicio||'--'}–${avail?.fin||'--'})`);
+      if (!avail ||
+          parseTime(dat.inicio) < parseTime(avail.inicio) ||
+          parseTime(dat.fin)    > parseTime(avail.fin)
+      ) {
+        alert(`No disponible el ${DAY_LABELS[i]} (${avail?.inicio || '--'}–${avail?.fin || '--'})`);
         continue;
       }
 
-      // Crear o actualizar
       const payload = {
         fecha:       f,
         hora_inicio: dat.inicio,
         hora_fin:    dat.fin,
         creado_por:  19,
-        observaciones:''
+        observaciones: ''
       };
-      if(dat.id) await updateTurno(dat.id,payload);
-      else      await crearTurno({ usuario_id:+crewSel, ...payload });
+
+      if (dat.id) await updateTurno(dat.id, payload);
+      else        await crearTurno({ usuario_id: +crewSel, ...payload });
     }
 
     store[crewSel] = Array.from(freeSet);
@@ -210,9 +250,10 @@ export default function PlanillaTurnos() {
     alert('Turnos procesados.');
   };
 
-  // Limpiar todo
-  const handleClearAll = async ()=>{
-    if(!window.confirm('¿Borrar todos los turnos y libres?')) return;
+  /* ==================== LIMPIAR Y ENVIAR ==================== */
+
+  const handleClearAll = async () => {
+    if (!window.confirm('¿Borrar todos los turnos y libres?')) return;
     await eliminarTodosTurnos();
     localStorage.removeItem(FREE_KEY);
     setInputs({});
@@ -220,13 +261,12 @@ export default function PlanillaTurnos() {
     alert('Tabla limpiada.');
   };
 
-  // Envío por correo
-  const handleSend = async ()=>{
-    if(!window.confirm('¿Enviar planilla?')) return;
-    const tableEl = document.querySelector('.input-table');
+  const handleSend = async () => {
+    if (!window.confirm('¿Enviar planilla?')) return;
+    const tableEl = document.querySelector('.crew-input-table-wrap');
     const canvas  = await html2canvas(tableEl);
     const img     = canvas.toDataURL('image/png');
-    const dst     = crews.map(u=>u.correo);
+    const dst     = crews.map(u => u.correo);
     await enviarCalendario({
       destinatarios: dst,
       asunto: `Planilla ${baseDate}`,
@@ -235,12 +275,13 @@ export default function PlanillaTurnos() {
     alert('Correo enviado.');
   };
 
-  // Cálculo de horas trabajadas para mostrar al lado del nombre
+  /* ==================== RESUMEN SEMANAL ==================== */
+
   const horasTrabajadas = crewId => {
     const row = cells[crewId] || {};
     let total = 0;
     Object.values(row).forEach(c => {
-      if(c && !c.free && c.inicio && c.fin){
+      if (c && !c.free && c.inicio && c.fin) {
         const mins = parseTime(c.fin) - parseTime(c.inicio);
         total += Math.max(0, mins/60 - 1);
       }
@@ -248,185 +289,295 @@ export default function PlanillaTurnos() {
     return +total.toFixed(1);
   };
 
-  // Resumen Semanal
-  const summary = weekDates.map((_,i)=>{
-    let tot=0, op=0, cl=0;
+  const summary = weekDates.map((_, i)=>{
+    let tot = 0, op = 0, cl = 0;
     crews.forEach(c=>{
       const t = cells[c.id]?.[i];
-      if(t && !t.free && t.inicio && t.fin){
+      if (t && !t.free && t.inicio && t.fin) {
         tot++;
-        if(t.fin==='23:30') cl++;
+        if (t.fin === '23:30') cl++;
         const sm = parseTime(t.inicio);
-        if(sm>=parseTime('08:00')&&sm<=parseTime('10:00')) op++;
+        if (sm >= parseTime('08:00') && sm <= parseTime('10:00')) op++;
       }
     });
-    return { total:tot, open:op, close:cl };
+    return { total: tot, open: op, close: cl };
   });
 
-  return (
-    <div className="planilla-container">
-      <h2>Planilla de Turnos</h2>
+  /* ==================== RENDER ==================== */
 
-      <div className="planilla-controls">
-        <div>
-          <Link to="/usuarios"><button>Ir a Crews</button></Link>
-          <label style={{marginLeft:16}}>
-            Crew:&nbsp;
-            <select value={crewSel} onChange={e=>setCrewSel(e.target.value)}>
+  return (
+    <div className="planilla-screen">
+      {/* Cabecera tipo poster */}
+      <div className="poster-head">
+        <h1>PLANILLA DE TURNOS</h1>
+        <p className="sub">Carga semanal por crew</p>
+      </div>
+
+      {/* Toolbar superior */}
+      <div className="toolbar">
+        <div className="left">
+          <Link to="/usuarios">
+            <button className="bk-btn ghost">← Ir a Crews</button>
+          </Link>
+
+          {/* Selector de crew (combo) */}
+          <label className="week-picker">
+            <span>Crew:</span>
+            <select
+              value={crewSel}
+              onChange={e => setCrewSel(e.target.value)}
+            >
               <option value="">-- selecciona --</option>
-              {crews.map(u=>(
+              {crews.map(u => (
                 <option key={u.id} value={u.id}>{u.nombre}</option>
               ))}
             </select>
           </label>
-          <label style={{marginLeft:16}}>
-            Semana:&nbsp;
+
+          {/* Semana */}
+          <label className="week-picker">
+            <span>Semana:</span>
             <input
               type="date"
               value={baseDate}
-              onChange={e=>setBaseDate(e.target.value)}
+              onChange={e => setBaseDate(e.target.value)}
             />
           </label>
-          <button onClick={handleSubmit} className="btn-save" style={{marginLeft:16}}>
+
+          <button
+            onClick={handleSubmit}
+            className="bk-btn primary"
+          >
             Crear/Actualizar
           </button>
         </div>
-        <div>
-          <button onClick={handleClearAll} style={{marginRight:16,background:'#c00',color:'#fff'}}>
+
+        <div className="right">
+          <button
+            onClick={handleClearAll}
+            className="bk-btn danger"
+          >
             Limpiar tabla
           </button>
-          <button onClick={handleSend} className="btn-email">
+          <button
+            onClick={handleSend}
+            className="bk-btn info"
+          >
             Enviar por correo
           </button>
         </div>
       </div>
 
-      {/* Tabla de inputs */}
-      <table className="input-table">
-        <thead>
-          <tr>
-            <th>Día</th>
-            <th>Fecha</th>
-            <th>Inicio</th>
-            <th>Fin</th>
-            <th>Libre</th>
-          </tr>
-        </thead>
-        <tbody>
-          {weekDates.map((d,i)=>{
-            const f    = d.toISOString().slice(0,10);
-            const tipo = benefits[crewSel]?.[f];
+      {/* BLOQUE: carga semanal de un solo crew */}
+      <div className="planilla-table-wrap crew-input-table-wrap">
+        <table className="crew-input-table">
+          <thead>
+            <tr>
+              <th>Día</th>
+              <th>Fecha</th>
+              <th>Inicio</th>
+              <th>Fin</th>
+              <th>Libre</th>
+            </tr>
+          </thead>
+          <tbody>
+            {weekDates.map((d, i) => {
+              const f      = d.toISOString().slice(0,10);
+              const tipo   = benefits[crewSel]?.[f];
+              const dat    = inputs[i] || {};
+              const isFree = !!dat.free;
+              const avail  = disps[crewSel]?.[DAY_LABELS[i].toLowerCase()];
 
-            // Día con beneficio
-            if(tipo){
+              // Día con beneficio
+              if (tipo) {
+                return (
+                  <tr key={i} className="row-benefit">
+                    <td>
+                      <div className="crew-day-pill">{DAY_LABELS[i]}</div>
+                    </td>
+                    <td>
+                      <div className="crew-date-cell">
+                        <span className="crew-date-main">
+                          {d.toLocaleDateString()}
+                        </span>
+                        <span className="crew-date-sub">
+                          Beneficio asignado
+                        </span>
+                      </div>
+                    </td>
+                    <td colSpan={3} className="cell-benefit">
+                      {tipo}
+                    </td>
+                  </tr>
+                );
+              }
+
+              // Día normal
               return (
-                <tr key={i}>
-                  <td>{DAY_LABELS[i]}</td>
-                  <td>{d.toLocaleDateString()}</td>
-                  <td colSpan={3} className={`benefit-${tipo}`}>
-                    {tipo}
+                <tr key={i} className={isFree ? 'row-free' : ''}>
+                  <td>
+                    <div className="crew-day-pill">{DAY_LABELS[i]}</div>
+                  </td>
+                  <td>
+                    <div className="crew-date-cell">
+                      <span className="crew-date-main">
+                        {d.toLocaleDateString()}
+                      </span>
+                      {isFree ? (
+                        <span className="crew-date-sub crew-date-sub--free">
+                          Día marcado como libre
+                        </span>
+                      ) : (
+                        avail && (
+                          <span className="crew-date-sub">
+                            Disp {avail.inicio} — {avail.fin}
+                          </span>
+                        )
+                      )}
+                    </div>
+                  </td>
+                  <td>
+                    <input
+                      type="time"
+                      disabled={isFree}
+                      value={dat.inicio || ''}
+                      onChange={e => handleInput(i,'inicio',e.target.value)}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      type="time"
+                      disabled={isFree}
+                      value={dat.fin || ''}
+                      onChange={e => handleInput(i,'fin',e.target.value)}
+                    />
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="mini btn-free-crew"
+                      onClick={() => toggleLibre(i)}
+                    >
+                      {isFree ? '✘ Libre' : 'Libre'}
+                    </button>
                   </td>
                 </tr>
               );
-            }
+            })}
+          </tbody>
+        </table>
+      </div>
 
-            // Día normal
-            return (
-              <tr key={i}>
-                <td>{DAY_LABELS[i]}</td>
-                <td>{d.toLocaleDateString()}</td>
-                <td>
-                  <input
-                    type="time"
-                    disabled={!!inputs[i]?.free}
-                    value={inputs[i]?.inicio||''}
-                    onChange={e=>handleInput(i,'inicio',e.target.value)}
-                  />
-                </td>
-                <td>
-                  <input
-                    type="time"
-                    disabled={!!inputs[i]?.free}
-                    value={inputs[i]?.fin||''}
-                    onChange={e=>handleInput(i,'fin',e.target.value)}
-                  />
-                </td>
-                <td>
-                  <button className="btn-free" onClick={()=>toggleLibre(i)}>
-                    {inputs[i]?.free ? '✘' : 'Libre'}
+      {/* BLOQUE: resumen semanal (mismo look que la planilla manual) */}
+      <div className="planilla-table-wrap">
+        <table className="planilla-table planilla-summary">
+          <thead>
+            <tr>
+              <th className="col-emp">Crew / Día</th>
+              {weekDates.map((_, i) => (
+                <th key={i}>
+                  <div className="day-head">
+                    <span className="day">{DAY_LABELS[i]}</span>
+                    <span className="date">
+                      {weekDates[i].toLocaleDateString()}
+                    </span>
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {crews.map(c => (
+              <tr key={c.id}>
+                <td className="emp-cell">
+                  <span className="emp-name">{c.nombre}</span>
+                  <span className="emp-badge">
+                    {horasTrabajadas(c.id)}/{c.horas_contrato}
+                  </span>
+                  {/* ID de usuario en la esquina, igual que en planilla manual */}
+                  <button
+                    type="button"
+                    className="corner-id"
+                    title={`Usuario ID: ${c.id}`}
+                  >
+                    i
                   </button>
                 </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                {weekDates.map((_, i) => {
+                  const f    = weekDates[i].toISOString().slice(0,10);
+                  const tipo = benefits[c.id]?.[f];
 
-      {/* Resumen Semanal */}
-      <h3 style={{marginTop:24}}>Resumen Semanal</h3>
-      <table className="planilla-table">
-        <thead>
-          <tr>
-            <th>Crew / Día</th>
-            {weekDates.map((_,i)=>(
-              <th key={i}>
-                {DAY_LABELS[i]}<br/>{weekDates[i].toLocaleDateString()}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {crews.map(c=>(
-            <tr key={c.id}>
-              <td className="first-col">
-                {c.nombre} ({horasTrabajadas(c.id)}/{c.horas_contrato})
-              </td>
-              {weekDates.map((_,i)=>{
-                const f    = weekDates[i].toISOString().slice(0,10);
-                const tipo = benefits[c.id]?.[f];
-                if(tipo){
+                  if (tipo) {
+                    return (
+                      <td key={i} className="tile tile--benefit">
+                        <span className="label">{tipo}</span>
+                      </td>
+                    );
+                  }
+
+                  const t     = cells[c.id]?.[i];
+                  const avail = disps[c.id]?.[DAY_LABELS[i].toLowerCase()];
+                  const assigned = t && !t.free && t.inicio && t.fin;
+                  const free     = t?.free;
+
+                  if (free) {
+                    return (
+                      <td key={i} className="tile tile--free">
+                        <span className="time-row">LIBRE</span>
+                      </td>
+                    );
+                  }
+                  if (assigned) {
+                    return (
+                      <td key={i} className="tile tile--shift">
+                        <span className="time-row">
+                          {t.inicio} — {t.fin}
+                        </span>
+                        {t.id && (
+                          <button
+                            type="button"
+                            className="corner-id"
+                            title={`Turno ID: ${t.id}`}
+                          >
+                            i
+                          </button>
+                        )}
+                      </td>
+                    );
+                  }
+                  if (avail) {
+                    return (
+                      <td key={i} className="tile tile--disp">
+                        <span className="time-row">
+                          Disp {avail.inicio} — {avail.fin}
+                        </span>
+                      </td>
+                    );
+                  }
                   return (
-                    <td key={i} className={`benefit-${tipo}`}>
-                      {tipo}
+                    <td key={i} className="tile tile--na">
+                      <span className="label">No disponible</span>
                     </td>
                   );
-                }
-                const t     = cells[c.id]?.[i];
-                const avail = disps[c.id]?.[DAY_LABELS[i].toLowerCase()];
-                const assigned = t && !t.free && t.inicio && t.fin;
-                const free     = t?.free;
-                let cls = '';
-                if(assigned) cls='assigned-cell';
-                else if(free) cls='free-cell';
-                return (
-                  <td key={i} className={cls}>
-                    {free
-                      ? <span className="free-label">Libre</span>
-                      : assigned
-                        ? `${t.inicio}–${t.fin}`
-                        : avail
-                          ? <span className="disp-range">
-                              Disp {avail.inicio}–{avail.fin}
-                            </span>
-                          : <span className="not-available">No disponible</span>
-                    }
-                  </td>
-                );
-              })}
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td>Resumen</td>
-            {summary.map((s,i)=>(
-              <td key={i}>
-                {s.total} (A:{s.open} C:{s.close})
-              </td>
+                })}
+              </tr>
             ))}
-          </tr>
-        </tfoot>
-      </table>
+          </tbody>
+          <tfoot>
+            <tr>
+              <td className="emp-cell foot">Resumen</td>
+              {summary.map((s, i) => (
+                <td key={i} className="tile tile--foot">
+                  <span className="foot-line">{s.total}</span>
+                  <span className="foot-mini">
+                    A:{s.open} • C:{s.close}
+                  </span>
+                </td>
+              ))}
+            </tr>
+          </tfoot>
+        </table>
+      </div>
     </div>
   );
 }

@@ -1,101 +1,126 @@
-/* Contenedor principal */
-.planilla-container {
-  padding: 1rem;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-  font-family: 'Arial', sans-serif;
-  color: #3D2314;
+/* ========= Estilos específicos para PlanillaTurnos.jsx ========= */
+
+/* Contenedor de la tabla de un solo crew */
+.crew-input-table-wrap{
+  margin: 10px 0 18px;
 }
 
-/* Controles */
-.planilla-controls {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-.planilla-controls button.btn-create { background: #E31837; color: #fff; }
-.planilla-controls button.btn-clear  { background: #c00;    color: #fff; }
-.planilla-controls button.btn-email  { background: #0066cc; color: #fff; }
-
-/* Tabla general */
-.planilla-table {
+/* Tabla superior (carga semanal por crew) */
+.crew-input-table{
   width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
+  border-collapse: separate;
+  border-spacing: 2px;
+  background: #3c160c;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
-/* Encabezados */
-.planilla-table th {
-  border: 1px solid #ccc;
-  padding: 8px;
-  background: #fff3c7;    /* Cabecera amarillo claro */
-  color: #3D2314;
-  font-weight: bold;
-}
-
-/* Primera columna (Día o Crew/Día) */
-.planilla-table td:first-child,
-.planilla-table th:first-child {
-  background: #fff3c7;    /* Amarillo claro */
-  color: #3D2314;
-  font-weight: bold;
-  text-align: left;
+/* Encabezado de la tabla por crew */
+.crew-input-table thead th{
+  background:#6d311d;
+  color:#fde7c8;
+  padding:6px 8px;
+  border:3px solid #2b170c;
+  font-weight:900;
+  text-align:left;
+  font-size:13px;
+  text-transform:uppercase;
+  letter-spacing:.03em;
 }
 
 /* Celdas normales */
-.planilla-table td {
-  border: 1px solid #ccc;
-  padding: 8px;
-  background: #ffffff;    /* Blanco */
-  text-align: center;
+.crew-input-table tbody td{
+  background:#f7eddc;
+  border:3px solid #2b170c;
+  padding:4px 6px;
+  font-size:13px;
+  vertical-align:middle;
 }
 
-/* Celda con turno asignado */
-.planilla-table td.assigned-cell {
-  background-color: #FFE0B2; /* Naranja suave */
+/* Fila con beneficio (cumpleaños, admin, etc.) */
+.crew-input-table .row-benefit td{
+  background:linear-gradient(180deg,#f0b73c,#d99815);
+  color:#2b170c;
+  font-weight:900;
+}
+.crew-input-table .cell-benefit{
+  text-align:center;
+  text-transform:uppercase;
+  letter-spacing:.03em;
 }
 
-/* Celda “Libre” */
-.planilla-table td.free-cell {
-  background-color: #C8E6C9; /* Verde claro */
+/* Fila marcada como libre */
+.crew-input-table tr.row-free td{
+  background:linear-gradient(180deg,#3fa35a,#2f7f46);
+  color:#fff;
+}
+.crew-input-table tr.row-free input[type="time"]{
+  background:rgba(255,255,255,.18);
+  border-color:#ffffff;
+  color:#ffffff;
 }
 
-/* Inputs dentro de celda libre */
-.planilla-table td.free-cell input {
-  background-color: #A5D6A7; /* Verde más intenso para inputs bloqueados */
+/* Pastilla con nombre del día (para que se lea bien) */
+.crew-day-pill{
+  display:inline-block;
+  padding:4px 10px;
+  border-radius:999px;
+  background:#3c160c;
+  color:#fde7c8;
+  font-weight:900;
+  font-size:12px;
+  letter-spacing:.04em;
+  text-transform:uppercase;
 }
 
-/* Botón “Libre” (superior) */
-.planilla-table td .btn-free {
-  background: #388E3C; /* Verde medio */
-  color: #fff;
+/* Celda de fecha + info de disponibilidad */
+.crew-date-cell{
+  display:flex;
+  flex-direction:column;
+  gap:2px;
+}
+.crew-date-main{
+  font-weight:900;
+  font-size:13px;
+}
+.crew-date-sub{
+  font-size:11px;
+  font-weight:800;
+  color:#7a5b3d;
+}
+.crew-date-sub--free{
+  color:#ffffff;
 }
 
-/* Texto “Libre” en resumen */
-.planilla-table .free-label {
-  color: #fff;
-  font-weight: bold;
+/* Inputs de hora en la tabla por crew */
+.crew-input-table input[type="time"]{
+  width:110px;
+  max-width:100%;
+  background:#fff3de;
+  border:2px solid #2b170c;
+  border-radius:8px;
+  padding:2px 4px;
+  font-weight:900;
+  font-size:12px;
+  box-shadow:0 2px 0 #2b170c;
 }
 
-/* Rango de disponibilidad */
-.planilla-table .disp-range {
-  color: #3D2314;
-  font-style: italic;
+/* Botón "Libre" de la fila por crew */
+.btn-free-crew{
+  border:3px solid #2b170c;
+  border-radius:9px;
+  padding:4px 8px;
+  font-weight:900;
+  cursor:pointer;
+  background:#3fa35a;
+  color:#fff;
+  box-shadow:0 2px 0 #2b170c;
+  font-size:12px;
+  min-width:90px;
 }
 
-/* “No disponible” */
-.planilla-table .not-available {
-  color: #B71C1C;
-  font-weight: bold;
-}
-
-/* Pie de tabla igual a encabezado */
-.planilla-table tfoot td {
-  border: 1px solid #ccc;
-  padding: 8px;
-  background: #fff3c7;
-  color: #3D2314;
-  font-weight: bold;
+/* Ajuste pequeño al resumen de abajo en esta page */
+.planilla-summary .tile .time-row{
+  font-weight:900;
+  font-size:14px;
 }

@@ -97,22 +97,31 @@
 }
 .beneficios-controls label{
   font-size:12px;
-  color:var(--bk-brown-700);
   font-weight:900;
+  color:var(--bk-brown-700);
+  letter-spacing:.2px;
+  text-transform:uppercase;
 }
+
+/* select estilo “pastilla” igual a Disponibilidades */
 .beneficios-controls select{
-  min-height:38px;
-  padding:8px 10px;
-  border-radius:10px;
-  background:#fff;
-  border:1px solid var(--bk-brown-200);
+  appearance:none;
+  background:#f3e1c7;
+  border:3px solid var(--bk-brown-800);
+  border-radius:12px;
+  padding:10px 12px;
+  min-height:44px;
+  font-weight:800;
+  box-shadow:0 10px 24px rgba(29,8,2,.22);
   outline:none;
-  transition:box-shadow .15s ease, border-color .15s ease;
+  transition:filter .15s ease, box-shadow .15s ease;
 }
+
 .beneficios-controls select:focus{
-  border-color:var(--bk-brown-300);
-  box-shadow:0 0 0 3px rgba(184,92,45,.15);
+  filter:brightness(1.02);
+  box-shadow:0 0 0 4px rgba(212,71,44,.15);
 }
+
 
 /* ===== Encabezados de sección ===== */
 .section-head{
