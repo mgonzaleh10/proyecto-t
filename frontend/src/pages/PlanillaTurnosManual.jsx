@@ -25,6 +25,7 @@ const FREE_KEY   = 'freeMap';
 // NUEVO: clave para persistir el progreso del notebook
 const PROGRESS_KEY = 'bk_notebook_progress';
 
+/* ===== Helpers de fechas / horas ===== */
 function parseTime(hm){ const [h,m]=hm.split(':').map(Number); return h*60+m; }
 function fmtYMD(d){ const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dd}`; }
 function parseLocalDate(ymd){ const [y,m,d]=ymd.split('-').map(Number); return new Date(y,m-1,d); }
@@ -33,6 +34,20 @@ function getWeekDates(base){
   const diff=(date.getDay()+6)%7;
   const mon=new Date(date); mon.setDate(date.getDate()-diff);
   return Array.from({length:7},(_,i)=>{ const d=new Date(mon); d.setDate(mon.getDate()+i); return d;});
+}
+
+function addDays(d, n){
+  const nd = new Date(d);
+  nd.setDate(nd.getDate()+n);
+  return nd;
+}
+function diffDays(start, end){
+  const ms = end - start;
+  return Math.round(ms / (1000*60*60*24));
+}
+function fmtDMY(ymd){
+  const [y,m,d] = ymd.split('-');
+  return `${d}/${m}/${y}`;
 }
 
 export default function PlanillaTurnosManual(){
@@ -44,6 +59,9 @@ export default function PlanillaTurnosManual(){
   const [disps,setDisps]=useState({});
   const [benefits,setBenefits]=useState({});
   const [leaves,setLeaves]=useState({});
+
+  // Advertencias por usuario: { [usuarioId]: [{start, end}, ...] }
+  const [warningMap, setWarningMap] = useState({});
 
   // === Progreso del notebook (persistente) ===
   const [pyProgress, setPyProgress] = useState({
@@ -83,6 +101,8 @@ export default function PlanillaTurnosManual(){
       // ignore
     }
   }, []);
+
+  /* ========= CARGA DE DATOS BASE ========= */
 
   useEffect(()=>{ getUsuarios().then(r=>setCrews(r.data)).catch(console.error); },[]);
   useEffect(()=>{
@@ -151,6 +171,124 @@ export default function PlanillaTurnosManual(){
 
   useEffect(()=>{ loadData(); },[loadData]);
 
+  /* ========= CÁLCULO DE ADVERTENCIAS (>6 días seguidos) ========= */
+
+  const recomputeWarnings = useCallback(async () => {
+    if (!weekDates.length || !crews.length) {
+      setWarningMap({});
+      return;
+    }
+
+    const monday = weekDates[0];
+    const start  = addDays(monday, -7);   // lunes anterior
+    const totalDays = 21;                 // semana anterior, actual y siguiente
+    const dates = Array.from({ length: totalDays }, (_, i) => addDays(start, i));
+    const ymdList = dates.map(fmtYMD);
+
+    // turnos reales en BD por usuario/fecha
+    const workMap = {};
+
+    try {
+      const responses = await Promise.all(
+        ymdList.map(async (ymd) => {
+          try {
+            const r = await getTurnosPorFecha(ymd);
+            return { ymd, data: r.data || [] };
+          } catch {
+            return { ymd, data: [] };
+          }
+        })
+      );
+
+      responses.forEach(({ ymd, data }) => {
+        data.forEach(t => {
+          const crewId = t.usuario_id;
+          const fecha  = String(t.fecha).slice(0,10);
+          if (fecha !== ymd) return;
+          if (!t.hora_inicio || !t.hora_fin) return;
+          workMap[crewId] = workMap[crewId] || {};
+          workMap[crewId][fecha] = true;
+        });
+      });
+
+      // Aplicar LIBRES manuales del localStorage
+      const store = JSON.parse(localStorage.getItem(FREE_KEY) || '{}');
+      Object.entries(store).forEach(([uidStr, fechas]) => {
+        const uid = Number(uidStr);
+        fechas.forEach(f => {
+          if (!ymdList.includes(f)) return;
+          workMap[uid] = workMap[uid] || {};
+          workMap[uid][f] = false; // día libre rompe racha
+        });
+      });
+
+      // Aplicar licencias y beneficios (no cuentan como trabajo)
+      crews.forEach(c => {
+        const uid = c.id;
+        ymdList.forEach(f => {
+          if (leaves[uid]?.[f] || benefits[uid]?.[f]) {
+            if (workMap[uid]) workMap[uid][f] = false;
+          }
+        });
+      });
+
+      const weekStart = fmtYMD(weekDates[0]);
+      const weekEnd   = fmtYMD(weekDates[6]);
+
+      const result = {};
+
+      crews.forEach(c => {
+        const uid = c.id;
+        let ranges = [];
+        let runStart = null;
+        let prevDate = null;
+
+        dates.forEach((d, idx) => {
+          const ymd = ymdList[idx];
+          const isWork = !!workMap[uid]?.[ymd];
+
+          if (isWork) {
+            if (runStart === null) {
+              runStart = ymd;
+            }
+          } else {
+            if (runStart !== null) {
+              const startY = runStart;
+              const endY   = fmtYMD(prevDate);
+              const len    = diffDays(parseLocalDate(startY), parseLocalDate(endY)) + 1;
+              if (len > 6) ranges.push({ start: startY, end: endY });
+              runStart = null;
+            }
+          }
+          prevDate = d;
+        });
+
+        if (runStart !== null) {
+          const startY = runStart;
+          const endY   = fmtYMD(dates[dates.length - 1]);
+          const len    = diffDays(parseLocalDate(startY), parseLocalDate(endY)) + 1;
+          if (len > 6) ranges.push({ start: startY, end: endY });
+        }
+
+        const overlapped = ranges.filter(r => !(r.end < weekStart || r.start > weekEnd));
+        if (overlapped.length) {
+          result[uid] = overlapped;
+        }
+      });
+
+      setWarningMap(result);
+    } catch (e) {
+      console.error('Error calculando advertencias:', e);
+      setWarningMap({});
+    }
+  }, [weekDates, crews, benefits, leaves]);
+
+  useEffect(() => {
+    recomputeWarnings();
+  }, [recomputeWarnings]);
+
+  /* ========= LIBRES / EDICIÓN ========= */
+
   const toggleLibre=(crewId,dayIdx)=>{
     setCells(prev=>{
       const next={...prev,[crewId]:{...prev[crewId]}};
@@ -163,6 +301,9 @@ export default function PlanillaTurnosManual(){
       localStorage.setItem(FREE_KEY,JSON.stringify(store));
       return next;
     });
+
+    // Recalcular advertencias al marcar/quitar libre
+    recomputeWarnings();
   };
 
   const handleCellChange=(crewId,dayIdx,field,val)=>{
@@ -173,6 +314,7 @@ export default function PlanillaTurnosManual(){
         [dayIdx]:{...(prev[crewId]?.[dayIdx]||{}),[field]:val,free:false}
       }
     }));
+    // Aquí NO recalculamos aún; se hará al guardar (saveAll)
   };
 
   const horasTrabajadas=(crewId)=>{
@@ -187,6 +329,7 @@ export default function PlanillaTurnosManual(){
   };
 
   const saveAll=async ()=>{
+    // Validación contra disponibilidades
     for(const crew of crews){
       const row=cells[crew.id]||{};
       for(let i=0;i<7;i++){
@@ -202,6 +345,7 @@ export default function PlanillaTurnosManual(){
         }
       }
     }
+    // Persistencia
     for(const crew of crews){
       const row=cells[crew.id]||{};
       for(let i=0;i<7;i++){
@@ -218,6 +362,7 @@ export default function PlanillaTurnosManual(){
     }
     setEditing(false);
     await loadData();
+    await recomputeWarnings();   // recalcular advertencias tras guardar
     alert('Turnos procesados.');
   };
 
@@ -235,6 +380,8 @@ export default function PlanillaTurnosManual(){
     return {total,open,close};
   });
 
+  /* ========= ENVÍO DE CORREO ========= */
+
   const handleSendEmail = async () => {
     if (!window.confirm('¿Enviar la foto de esta planilla por correo?')) return;
 
@@ -245,26 +392,22 @@ export default function PlanillaTurnosManual(){
         return;
       }
 
-      // Guardar fondos actuales
       const screenEl = document.querySelector('.planilla-screen');
       const prevBodyBg   = document.body.style.backgroundColor;
       const prevScreenBg = screenEl ? screenEl.style.backgroundColor : '';
 
-      // Fijar fondo sólido igual al del tema BK
-      const bkBg = '#6a2e1f'; // mismo café de la app
+      const bkBg = '#6a2e1f';
       document.body.style.backgroundColor = bkBg;
       if (screenEl) screenEl.style.backgroundColor = bkBg;
 
-      // Captura en alta resolución respetando colores del nodo
       const canvas = await html2canvas(tableEl, {
-        backgroundColor: null,                        // usa los colores reales del wrap
-        scale: window.devicePixelRatio > 1 ? 2 : 1.5, // un poco más de resolución
+        backgroundColor: null,
+        scale: window.devicePixelRatio > 1 ? 2 : 1.5,
         useCORS: true,
         scrollX: -window.scrollX,
         scrollY: -window.scrollY,
       });
 
-      // Restaurar fondos originales
       document.body.style.backgroundColor = prevBodyBg;
       if (screenEl) screenEl.style.backgroundColor = prevScreenBg;
 
@@ -285,28 +428,27 @@ export default function PlanillaTurnosManual(){
     }
   };
 
-
   const handleClearTable=async ()=>{
     if(!window.confirm('¿Borrar todos los turnos y libres asignados?')) return;
     await eliminarTodosTurnos();
     localStorage.removeItem(FREE_KEY);
     setEditing(false);
     await loadData();
+    await recomputeWarnings();
     alert('Tabla limpiada.');
   };
 
   const handleToggleEdit=()=>{ if(editing){ loadData(); setEditing(false);} else{ setEditing(true);} };
 
-  // === Generar notebook + importar automáticamente a BD y recargar planilla ===
+  /* ========= NOTEBOOK PY ========= */
+
   const handleGeneratePy=async ()=>{
     const monday=fmtYMD(weekDates[0]);
     if(!window.confirm(`¿Generar turnos con el notebook para la semana que inicia el ${monday} y guardarlos en la BD?`)) return;
     try{
-      // Paso 1: ejecutar notebook
       updateProgress({ running:true, step:1, total:3, label:'Ejecutando notebook…' });
       await generarPython(monday);
 
-      // Paso 2: leer Excel de salida
       updateProgress(prev => ({ ...prev, step:2, label:'Leyendo resultados generados…' }));
       const { data } = await previewPython(monday);
       const items = Array.isArray(data) ? data : (data?.items || []);
@@ -317,13 +459,13 @@ export default function PlanillaTurnosManual(){
         return;
       }
 
-      // Paso 3: guardar en BD
       updateProgress(prev => ({ ...prev, step:3, label:'Guardando turnos en la base de datos…' }));
       const resp = await commitPython(items);
       const inserted = resp?.data?.inserted ?? 0;
 
       await loadData();
       setEditing(false);
+      await recomputeWarnings();
 
       updateProgress({ running:false, step:3, total:3, label:'Completado' });
       localStorage.removeItem(PROGRESS_KEY);
@@ -416,7 +558,12 @@ export default function PlanillaTurnosManual(){
         return next;
       });
     }
+
+    // Recalcular advertencias al asignar / quitar días libres en masa
+    recomputeWarnings();
   };
+
+  /* ========= RENDER CELDAS ========= */
 
   const renderViewCell = (c, avail) => {
     if(c?.free){
@@ -497,6 +644,8 @@ export default function PlanillaTurnosManual(){
     );
   };
 
+  /* ========= RENDER PRINCIPAL ========= */
+
   return (
     <div className="planilla-screen">
       <div className="poster-head">
@@ -558,6 +707,8 @@ export default function PlanillaTurnosManual(){
                   </div>
                 </th>
               ))}
+              {/* Columna extra sin encabezado visible */}
+              <th className="warn-col" aria-label="Advertencias de días consecutivos" />
             </tr>
           </thead>
           <tbody>
@@ -602,6 +753,23 @@ export default function PlanillaTurnosManual(){
                     ? <React.Fragment key={i}>{renderEditCell(c.id,i,avail,t)}</React.Fragment>
                     : <React.Fragment key={i}>{renderViewCell(t,avail)}</React.Fragment>;
                 })}
+
+                {/* Celda de advertencias (sin encabezado visible) */}
+                <td className="warn-cell">
+  {warningMap[c.id]?.length > 0 && (
+    <span
+      className="warn-icon"
+      title={
+        warningMap[c.id]
+          .map(r => `Más de 6 días consecutivos trabajados entre ${fmtDMY(r.start)} y ${fmtDMY(r.end)}`)
+          .join('\n')
+      }
+    >
+      !
+    </span>
+  )}
+</td>
+
               </tr>
             ))}
           </tbody>
@@ -615,6 +783,8 @@ export default function PlanillaTurnosManual(){
                   <span className="foot-mini">A:{s.open} • C:{s.close}</span>
                 </td>
               ))}
+              {/* Celda vacía para que el pie tenga el mismo número de columnas */}
+              <td className="warn-cell foot" />
             </tr>
           </tfoot>
         </table>

@@ -5,7 +5,6 @@ import { Routes, Route, Link } from 'react-router-dom';
 import BKNav from './components/BKNav'; // ⬅️ navbar pro
 
 import Home from './pages/Home';
-import TurnosPage from './pages/TurnosPage';
 import Intercambio from './pages/Intercambio';
 import UsuariosPage from './pages/UsuariosPage';
 import PlanillaTurnos from './pages/PlanillaTurnos';
@@ -26,7 +25,6 @@ export default function App() {
       <main style={{ padding: '2rem' }}>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/turnos" element={<TurnosPage />} />
           <Route path="/intercambio" element={<Intercambio />} />
           <Route path="/usuarios" element={<UsuariosPage />} />
           <Route path="/planilla" element={<PlanillaTurnos />} />

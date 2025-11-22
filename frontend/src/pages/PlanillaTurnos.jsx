@@ -22,9 +22,16 @@ import './PlanillaTurnos.css';
 const DAY_LABELS = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
 const FREE_KEY   = 'freeMap';
 
+/* ===== Helpers de fechas / horas ===== */
 function parseLocalDate(ymd) {
   const [y,m,d] = ymd.split('-').map(Number);
   return new Date(y, m-1, d);
+}
+function fmtYMD(d){
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd= String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
 }
 function getWeekDates(base) {
   const date = typeof base==='string' ? parseLocalDate(base) : new Date(base);
@@ -41,6 +48,19 @@ function parseTime(hm) {
   const [h,m] = hm.split(':').map(Number);
   return h*60 + m;
 }
+function addDays(d, n){
+  const nd = new Date(d);
+  nd.setDate(nd.getDate()+n);
+  return nd;
+}
+function diffDays(start, end){
+  const ms = end - start;
+  return Math.round(ms / (1000*60*60*24));
+}
+function fmtDMY(ymd){
+  const [y,m,d] = ymd.split('-');
+  return `${d}/${m}/${y}`;
+}
 
 export default function PlanillaTurnos() {
   const [baseDate, setBaseDate]     = useState(new Date().toISOString().slice(0,10));
@@ -51,6 +71,9 @@ export default function PlanillaTurnos() {
   const [cells, setCells]           = useState({});
   const [disps, setDisps]           = useState({});
   const [benefits, setBenefits]     = useState({});
+
+  // Advertencias por usuario: { [usuarioId]: [{start, end}, ...] }
+  const [warningMap, setWarningMap] = useState({});
 
   /* ==================== CARGAS INICIALES ==================== */
 
@@ -96,7 +119,7 @@ export default function PlanillaTurnos() {
   const loadData = useCallback(async ()=>{
     const all = [];
     for(const d of weekDates){
-      const f = d.toISOString().slice(0,10);
+      const f = fmtYMD(d);
       try {
         const r = await getTurnosPorFecha(f);
         all.push(...r.data);
@@ -107,9 +130,8 @@ export default function PlanillaTurnos() {
 
     const m = {};
     all.forEach(t=>{
-      const idx = weekDates.findIndex(
-        dd => dd.toISOString().slice(0,10) === String(t.fecha).slice(0,10)
-      );
+      const fecha = String(t.fecha).slice(0,10);
+      const idx = weekDates.findIndex(dd => fmtYMD(dd) === fecha);
       if(idx < 0) return;
       m[t.usuario_id] = m[t.usuario_id] || {};
       m[t.usuario_id][idx] = {
@@ -125,11 +147,10 @@ export default function PlanillaTurnos() {
     Object.entries(store).forEach(([uid, dates])=>{
       const u = Number(uid);
       dates.forEach(ds=>{
-        const idx = weekDates.findIndex(dd => dd.toISOString().slice(0,10) === ds);
+        const idx = weekDates.findIndex(dd => fmtYMD(dd) === ds);
         if (idx >= 0) {
           m[u] = m[u] || {};
           const prev = m[u][idx] || {};
-          // marcamos free pero conservamos id/inicio/fin si existían
           m[u][idx] = { ...prev, free: true };
         }
       });
@@ -139,6 +160,122 @@ export default function PlanillaTurnos() {
   },[weekDates]);
 
   useEffect(()=>{ loadData(); },[loadData]);
+
+  /* ==================== ADVERTENCIAS (>6 días seguidos) ==================== */
+
+  const recomputeWarnings = useCallback(async () => {
+    if (!weekDates.length || !crews.length) {
+      setWarningMap({});
+      return;
+    }
+
+    const monday = weekDates[0];
+    const start  = addDays(monday, -7);   // lunes anterior
+    const totalDays = 21;                 // semana anterior, actual y siguiente
+    const dates = Array.from({ length: totalDays }, (_, i) => addDays(start, i));
+    const ymdList = dates.map(fmtYMD);
+
+    const workMap = {};
+
+    try {
+      const responses = await Promise.all(
+        ymdList.map(async (ymd) => {
+          try {
+            const r = await getTurnosPorFecha(ymd);
+            return { ymd, data: r.data || [] };
+          } catch {
+            return { ymd, data: [] };
+          }
+        })
+      );
+
+      responses.forEach(({ ymd, data }) => {
+        data.forEach(t => {
+          const crewId = t.usuario_id;
+          const fecha  = String(t.fecha).slice(0,10);
+          if (fecha !== ymd) return;
+          if (!t.hora_inicio || !t.hora_fin) return;
+          workMap[crewId] = workMap[crewId] || {};
+          workMap[crewId][fecha] = true;
+        });
+      });
+
+      // Aplicar libres manuales (rompen racha)
+      const store = JSON.parse(localStorage.getItem(FREE_KEY) || '{}');
+      Object.entries(store).forEach(([uidStr, fechas]) => {
+        const uid = Number(uidStr);
+        fechas.forEach(f => {
+          if (!ymdList.includes(f)) return;
+          workMap[uid] = workMap[uid] || {};
+          workMap[uid][f] = false;
+        });
+      });
+
+      // Beneficios tampoco cuentan como trabajo
+      crews.forEach(c => {
+        const uid = c.id;
+        ymdList.forEach(f => {
+          if (benefits[uid]?.[f]) {
+            if (workMap[uid]) workMap[uid][f] = false;
+          }
+        });
+      });
+
+      const weekStart = fmtYMD(weekDates[0]);
+      const weekEnd   = fmtYMD(weekDates[6]);
+
+      const result = {};
+
+      crews.forEach(c => {
+        const uid = c.id;
+        let ranges = [];
+        let runStart = null;
+        let prevDate = null;
+
+        dates.forEach((d, idx) => {
+          const ymd = ymdList[idx];
+          const isWork = !!workMap[uid]?.[ymd];
+
+          if (isWork) {
+            if (runStart === null) {
+              runStart = ymd;
+            }
+          } else {
+            if (runStart !== null) {
+              const startY = runStart;
+              const endY   = fmtYMD(prevDate);
+              const len    = diffDays(parseLocalDate(startY), parseLocalDate(endY)) + 1;
+              if (len > 6) ranges.push({ start: startY, end: endY });
+              runStart = null;
+            }
+          }
+          prevDate = d;
+        });
+
+        if (runStart !== null) {
+          const startY = runStart;
+          const endY   = fmtYMD(dates[dates.length - 1]);
+          const len    = diffDays(parseLocalDate(startY), parseLocalDate(endY)) + 1;
+          if (len > 6) ranges.push({ start: startY, end: endY });
+        }
+
+        const overlapped = ranges.filter(r => !(r.end < weekStart || r.start > weekEnd));
+        if (overlapped.length) {
+          result[uid] = overlapped;
+        }
+      });
+
+      setWarningMap(result);
+    } catch (e) {
+      console.error('Error calculando advertencias:', e);
+      setWarningMap({});
+    }
+  }, [weekDates, crews, benefits]);
+
+  // Recalcular cuando cambie semana / crews / beneficios
+  useEffect(() => {
+    recomputeWarnings();
+  }, [recomputeWarnings]);
 
   /* ==================== PREFILL AL CAMBIAR CREW ==================== */
 
@@ -173,7 +310,6 @@ export default function PlanillaTurnos() {
         [i]: {
           ...cur,
           free: !cur.free,
-          // si marco libre, limpio horas visualmente
           inicio: !cur.free ? '' : cur.inicio,
           fin:    !cur.free ? '' : cur.fin
         }
@@ -195,11 +331,11 @@ export default function PlanillaTurnos() {
     }
 
     const store   = JSON.parse(localStorage.getItem(FREE_KEY) || '{}');
-    const freeSet = new Set(store[crewSel] || []);
+    const freeSet = new Set(store[crewSel] || {});
 
     for (let i = 0; i < 7; i++) {
       const dat = inputs[i] || {};
-      const f   = weekDates[i].toISOString().slice(0,10);
+      const f   = fmtYMD(weekDates[i]);
 
       // beneficio → no se graba turno ni libre
       if (benefits[crewSel]?.[f]) {
@@ -247,6 +383,7 @@ export default function PlanillaTurnos() {
     localStorage.setItem(FREE_KEY, JSON.stringify(store));
 
     await loadData();
+    await recomputeWarnings();  // actualizar iconos
     alert('Turnos procesados.');
   };
 
@@ -258,6 +395,7 @@ export default function PlanillaTurnos() {
     localStorage.removeItem(FREE_KEY);
     setInputs({});
     await loadData();
+    await recomputeWarnings();
     alert('Tabla limpiada.');
   };
 
@@ -382,7 +520,7 @@ export default function PlanillaTurnos() {
           </thead>
           <tbody>
             {weekDates.map((d, i) => {
-              const f      = d.toISOString().slice(0,10);
+              const f      = fmtYMD(d);
               const tipo   = benefits[crewSel]?.[f];
               const dat    = inputs[i] || {};
               const isFree = !!dat.free;
@@ -484,6 +622,8 @@ export default function PlanillaTurnos() {
                   </div>
                 </th>
               ))}
+              {/* Columna extra sin encabezado visible (advertencias) */}
+              <th className="warn-col" aria-label="Advertencias de días consecutivos" />
             </tr>
           </thead>
           <tbody>
@@ -504,7 +644,7 @@ export default function PlanillaTurnos() {
                   </button>
                 </td>
                 {weekDates.map((_, i) => {
-                  const f    = weekDates[i].toISOString().slice(0,10);
+                  const f    = fmtYMD(weekDates[i]);
                   const tipo = benefits[c.id]?.[f];
 
                   if (tipo) {
@@ -560,6 +700,24 @@ export default function PlanillaTurnos() {
                     </td>
                   );
                 })}
+
+                {/* Celda de advertencias lateral */}
+                <td className="warn-cell">
+                  {warningMap[c.id]?.length > 0 && (
+                    <span
+                      className="warn-icon"
+                      title={
+                        warningMap[c.id]
+                          .map(r =>
+                            `Más de 6 días consecutivos trabajados entre ${fmtDMY(r.start)} y ${fmtDMY(r.end)}`
+                          )
+                          .join('\n')
+                      }
+                    >
+                      !
+                    </span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -574,6 +732,8 @@ export default function PlanillaTurnos() {
                   </span>
                 </td>
               ))}
+              {/* Celda vacía para alinear columna de advertencias */}
+              <td className="warn-cell foot" />
             </tr>
           </tfoot>
         </table>
