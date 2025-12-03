@@ -183,9 +183,6 @@ async function recomendarIntercambioService({
   // NUEVO: horas efectivas = horas - días (colación 1h/día)
   const { hoursMap: horasMapRaw, daysCountMap } = summarizeWeekStats(turnosSemana);
 
-  // Config
-  const TOL_MIN = 30; // tolerancia de duración
-
   const coberturas = [];
   const swaps = [];
   const vistosSwap = new Set(); // uid|fechaB|inicioB|finB
@@ -205,7 +202,7 @@ async function recomendarIntercambioService({
       const dCnt = daysCountMap.get(uid) || 0;            // días con turno (colación 1h/día)
       const horasEfectivas = hRaw - dCnt;                 // aplica descuento por colación
       const delta = hoursBetween(turnoA.hora_inicio, turnoA.hora_fin);
-      const afterEff = horasEfectivas + delta;            // **sin** descontar colación del nuevo día (según tu regla)
+      const afterEff = horasEfectivas + delta;            // **sin** descontar colación del nuevo día
       const extras = Math.max(0, Math.round(afterEff - (uInfo.horas_contrato || 0)));
 
       // Score: menos extras => mejor
@@ -229,13 +226,16 @@ async function recomendarIntercambioService({
       if (!bDisponible) debug.descartes[uid] = 'sin disponibilidad ese día';
     }
 
-    /* ---------- INTERCAMBIOS REALES (SIN CAMBIOS) ---------- */
+    /* ---------- INTERCAMBIOS REALES ---------- */
     const turnosB = turnosByUser.get(uid) || [];
     const minsA = minutesBetween(turnoA.hora_inicio, turnoA.hora_fin);
 
     for (const tB of turnosB) {
       const aPuedeB = isAvailable(dispoMap, usuarioId, tB.fecha, tB.hora_inicio, tB.hora_fin);
-      if (!aPuedeB) { debug.notas.push(`swap descartado A<->${uid}: A sin disponibilidad para la fecha destino`); continue; }
+      if (!aPuedeB) {
+        debug.notas.push(`swap descartado A<->${uid}: A sin disponibilidad para la fecha destino`);
+        continue;
+      }
 
       if (!isAvailable(dispoMap, uid, turnoA.fecha, turnoA.hora_inicio, turnoA.hora_fin)) {
         debug.notas.push(`swap descartado A<->${uid}: B sin disponibilidad para la fecha destino`);
@@ -250,10 +250,7 @@ async function recomendarIntercambioService({
       }
 
       const minsB = minutesBetween(tB.hora_inicio, tB.hora_fin);
-      if (Math.abs(minsA - minsB) > TOL_MIN) {
-        debug.notas.push(`swap descartado A<->${uid}: duraciones distintas (A ${minsA} vs B ${minsB} min)`); 
-        continue;
-      }
+      const diffMins = Math.abs(minsA - minsB); // << ya NO descarta, solo penaliza score
 
       const turnosA = turnosByUser.get(usuarioId) || [];
       const turnosDeB = turnosByUser.get(uid) || [];
@@ -264,20 +261,32 @@ async function recomendarIntercambioService({
           sameDay(x.fecha, tB.fecha) &&
           !(x.hora_fin <= tB.hora_inicio || x.hora_inicio >= tB.hora_fin)
         );
-        if (solapaA) { debug.notas.push(`swap descartado A<->${uid}: A quedaría solapado el ${tB.fecha}`); continue; }
+        if (solapaA) {
+          debug.notas.push(`swap descartado A<->${uid}: A quedaría solapado el ${tB.fecha}`);
+          continue;
+        }
 
         const solapaB = turnosDeB.some(x =>
           x.id !== tB.id &&
           sameDay(x.fecha, turnoA.fecha) &&
           !(x.hora_fin <= turnoA.hora_inicio || x.hora_inicio >= turnoA.hora_fin)
         );
-        if (solapaB) { debug.notas.push(`swap descartado A<->${uid}: B quedaría solapado el ${turnoA.fecha}`); continue; }
+        if (solapaB) {
+          debug.notas.push(`swap descartado A<->${uid}: B quedaría solapado el ${turnoA.fecha}`);
+          continue;
+        }
       } else {
         const aTieneAlgoEnFechaB = hasOverlap(turnosA, tB.fecha, tB.hora_inicio, tB.hora_fin, null);
-        if (aTieneAlgoEnFechaB) { debug.notas.push(`swap descartado A<->${uid}: A ya tiene turno el ${fmt(toDate(tB.fecha))}`); continue; }
+        if (aTieneAlgoEnFechaB) {
+          debug.notas.push(`swap descartado A<->${uid}: A ya tiene turno el ${fmt(toDate(tB.fecha))}`);
+          continue;
+        }
 
         const bTieneAlgoEnFechaA = hasOverlap(turnosDeB, turnoA.fecha, turnoA.hora_inicio, turnoA.hora_fin, null);
-        if (bTieneAlgoEnFechaA) { debug.notas.push(`swap descartado A<->${uid}: B ya tiene turno el ${fmt(toDate(turnoA.fecha))}`); continue; }
+        if (bTieneAlgoEnFechaA) {
+          debug.notas.push(`swap descartado A<->${uid}: B ya tiene turno el ${fmt(toDate(turnoA.fecha))}`);
+          continue;
+        }
       }
 
       const key = `${uid}|${fmt(toDate(tB.fecha))}|${tB.hora_inicio}|${tB.hora_fin}`;
@@ -285,14 +294,44 @@ async function recomendarIntercambioService({
       vistosSwap.add(key);
 
       let score = 50;
-      if (sameDay(tB.fecha, turnoA.fecha)) score += 10;
-      if (minsA === minsB) score += 5;
-
       const motivo = [];
-      motivo.push(minsA === minsB ? 'Misma duración' : 'Duración similar');
-      motivo.push('Ambos disponibles');
-      if (sameDay(tB.fecha, turnoA.fecha)) motivo.push('Mismo día');
-      if (Math.max(0, Math.round((horasSemana.get(uid) || 0) + (minsA/60) - (uInfo.horas_contrato || 0))) === 0) {
+
+      // bonus por mismo día
+      if (sameDay(tB.fecha, turnoA.fecha)) {
+        score += 10;
+        motivo.push('Mismo día');
+      }
+
+      // bonus / penalización por duración
+      if (diffMins === 0) {
+        score += 5;
+        motivo.push('Misma duración');
+      } else if (diffMins <= 60) {
+        // diferencias hasta 1h -> penalización suave
+        score -= 5;
+        motivo.push(`Duración similar (dif. ${diffMins} min)`);
+        debug.notas.push(`swap A<->${uid}: duraciones distintas aceptadas (A ${minsA} vs B ${minsB} min, -5 score)`);
+      } else if (diffMins <= 120) {
+        // 1–2h -> penalización media
+        score -= 10;
+        motivo.push(`Duración distinta (dif. ${diffMins} min)`);
+        debug.notas.push(`swap A<->${uid}: duraciones distintas aceptadas (A ${minsA} vs B ${minsB} min, -10 score)`);
+      } else {
+        // más de 2h -> penalización fuerte pero se permite
+        score -= 15;
+        motivo.push(`Duración muy distinta (dif. ${diffMins} min)`);
+        debug.notas.push(`swap A<->${uid}: duraciones muy distintas aceptadas (A ${minsA} vs B ${minsB} min, -15 score)`);
+      }
+
+      // horas extra para B después del swap
+      if (Math.max(
+        0,
+        Math.round(
+          (horasSemana.get(uid) || 0) +
+          (minsA / 60) -
+          (uInfo.horas_contrato || 0)
+        )
+      ) === 0) {
         motivo.push('Sin penalización de horas');
       }
 
