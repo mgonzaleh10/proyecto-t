@@ -16,6 +16,10 @@ import { getUsuarios } from '../api/usuarios';
 import { getDisponibilidades } from '../api/disponibilidades';
 import { getBeneficios } from '../api/beneficios';
 import { obtenerLicencias } from '../api/licencias';
+import {
+  recomendarIntercambio,
+  confirmarIntercambio
+} from '../api/intercambios.jsx';
 
 import './PlanillaTurnosManual.css';
 
@@ -50,6 +54,54 @@ function fmtDMY(ymd){
   return `${d}/${m}/${y}`;
 }
 
+/* === Helpers compartidos con Intercambio.jsx === */
+
+// Normaliza fecha "YYYY-MM-DD"
+const normalizeDate = (v) => {
+  if (!v) return '';
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  if (typeof v === 'string' && v.includes('T')) return v.slice(0, 10);
+  return String(v);
+};
+
+// Extrae datos del Turno B soportando ambos formatos de backend
+const getTurnoB = (r) => {
+  const fechaB =
+    (r?.intercambio && (r.intercambio.fechaB || r.intercambio.fecha_b)) ||
+    r?.turno_B_fecha ||
+    r?.turnoBFecha ||
+    r?.fechaB ||
+    '';
+
+  const inicioB =
+    (r?.intercambio && (r.intercambio.inicioB || r.intercambio.hora_inicio_b)) ||
+    r?.turno_B_inicio ||
+    r?.turnoBInicio ||
+    r?.inicioB ||
+    '';
+
+  const finB =
+    (r?.intercambio && (r.intercambio.finB || r.intercambio.hora_fin_b)) ||
+    r?.turno_B_fin ||
+    r?.turnoBFin ||
+    r?.finB ||
+    '';
+
+  const turnoDestinoId =
+    (r?.intercambio && r.intercambio.turnoDestinoId) ||
+    r?.turno_destino_id ||
+    r?.turno_B_id ||
+    r?.turnoBId ||
+    null;
+
+  return {
+    fechaB: normalizeDate(fechaB),
+    inicioB: inicioB || '',
+    finB: finB || '',
+    turnoDestinoId
+  };
+};
+
 export default function PlanillaTurnosManual(){
   const [baseDate,setBaseDate]=useState(fmtYMD(new Date()));
   const [weekDates,setWeekDates]=useState(getWeekDates(baseDate));
@@ -70,6 +122,13 @@ export default function PlanillaTurnosManual(){
     total: 3,
     label: ''
   });
+
+  // === Estado para intercambio de turnos directamente en la planilla ===
+  // swapSource: { uid, dayIdx, turno, fecha, hora_inicio, hora_fin, turno_id }
+  // swapCandidates: [{ ...swapBackend, uid, dayIdx }]
+  const [swapMode, setSwapMode] = useState(false);
+  const [swapSource, setSwapSource] = useState(null);
+  const [swapCandidates, setSwapCandidates] = useState([]);
 
   // helper para actualizar estado + localStorage a la vez
   const updateProgress = (updater) => {
@@ -438,7 +497,18 @@ export default function PlanillaTurnosManual(){
     alert('Tabla limpiada.');
   };
 
-  const handleToggleEdit=()=>{ if(editing){ loadData(); setEditing(false);} else{ setEditing(true);} };
+  const handleToggleEdit=()=>{
+    if(editing){
+      loadData();
+      setEditing(false);
+    } else{
+      // si entramos a editar, apagamos intercambio
+      setSwapMode(false);
+      setSwapSource(null);
+      setSwapCandidates([]);
+      setEditing(true);
+    }
+  };
 
   /* ========= NOTEBOOK PY ========= */
 
@@ -563,45 +633,276 @@ export default function PlanillaTurnosManual(){
     recomputeWarnings();
   };
 
+  /* ====== INTERCAMBIO DIRECTO EN LA PLANILLA ====== */
+
+  const resetSwapState = () => {
+    setSwapMode(false);
+    setSwapSource(null);
+    setSwapCandidates([]);
+  };
+
+  const handleToggleSwapMode = () => {
+    if (swapMode) {
+      resetSwapState();
+    } else {
+      if (editing) {
+        alert('Termina o cancela la edición antes de usar el intercambio.');
+        return;
+      }
+      setSwapMode(true);
+      setSwapSource(null);
+      setSwapCandidates([]);
+    }
+  };
+
+  const handleConfirmSwap = async (source, cand) => {
+    if (!source || !cand) return;
+    if (cand.tipo !== 'swap') return;
+
+    const uidA = source.uid;
+    const uidB = cand.usuario_id;
+    const fechaA = source.fecha;
+    const inicioA = source.turno.inicio;
+    const finA = source.turno.fin;
+
+    const crewA = crews.find(c => c.id === uidA);
+    const crewB = crews.find(c => c.id === uidB);
+
+    const tB = getTurnoB(cand);
+
+    if (!tB.turnoDestinoId) {
+      alert('No se pudo identificar el turno destino para el intercambio.');
+      return;
+    }
+
+    const msg =
+      'Confirmar INTERCAMBIO real:\n\n' +
+      `${crewA?.nombre || `ID ${uidA}`} cede su turno ${fechaA} ${inicioA}-${finA}\n` +
+      `${crewB?.nombre || `ID ${uidB}`} cede su turno ${tB.fechaB} ${tB.inicioB}-${tB.finB}\n\n` +
+      '¿Deseas confirmar?';
+
+    if (!window.confirm(msg)) return;
+
+    try {
+      const payload = {
+        tipo: 'swap',
+        turno_origen_id: source.turno_id ? Number(source.turno_id) : null,
+        usuario_solicitante: uidA,
+        usuario_candidato: uidB,
+        fecha: fechaA,
+        hora_inicio: inicioA,
+        hora_fin: finA,
+        turno_destino_id: tB.turnoDestinoId
+      };
+
+      await confirmarIntercambio(payload);
+
+      // Sincronizar freeMap como en Intercambio.jsx
+      try {
+        const raw = localStorage.getItem(FREE_KEY) || '{}';
+        const store = JSON.parse(raw);
+
+        const removeFree = (uid, fecha) => {
+          if (!uid || !fecha) return;
+          const key = String(uid);
+          if (!store[key]) return;
+          const setFechas = new Set(store[key]);
+          setFechas.delete(fecha);
+          store[key] = Array.from(setFechas);
+          if (store[key].length === 0) delete store[key];
+        };
+
+        const addFree = (uid, fecha) => {
+          if (!uid || !fecha) return;
+          const key = String(uid);
+          const setFechas = new Set(store[key] || []);
+          setFechas.add(fecha);
+          store[key] = Array.from(setFechas);
+        };
+
+        if (tB.fechaB && tB.fechaB !== fechaA) {
+          // Quitar libres donde ahora hay turno
+          removeFree(uidA, tB.fechaB);
+          removeFree(uidB, fechaA);
+
+          // Añadir libres donde ahora NO hay turno
+          addFree(uidA, fechaA);
+          addFree(uidB, tB.fechaB);
+        }
+
+        localStorage.setItem(FREE_KEY, JSON.stringify(store));
+      } catch (e) {
+        console.warn('No se pudo actualizar freeMap tras el swap:', e);
+      }
+
+      await loadData();
+      await recomputeWarnings();
+
+      resetSwapState();
+      alert('Intercambio de turnos realizado correctamente.');
+    } catch (e) {
+      console.error(e);
+      alert('Error al realizar el intercambio de turnos.');
+    }
+  };
+
+  // Devuelve clase extra para cada celda según el estado del modo intercambio
+  const getSwapCellClass = (crewId, dayIdx, hasShift) => {
+  if (!swapMode) return '';
+
+  // Fase 1: sin origen aún → sólo marcamos los turnos clicables
+  if (!swapSource) {
+    return hasShift ? ' tile--clickable' : ' tile--disabled';
+  }
+
+  // Turno origen A seleccionado
+  if (swapSource.uid === crewId && swapSource.dayIdx === dayIdx) {
+    return ' tile--source';
+  }
+
+  // Turnos candidatos B
+  const isCandidate = swapCandidates.some(
+    cand => cand.uid === crewId && cand.dayIdx === dayIdx
+  );
+  if (isCandidate) {
+    return ' tile--candidate';
+  }
+
+  // Resto de celdas se apagan
+  return ' tile--disabled';
+};
+
+
   /* ========= RENDER CELDAS ========= */
 
-  const renderViewCell = (c, avail) => {
-    if(c?.free){
-      return (
-        <td className="tile tile--free">
-          <span className="time-row">LIBRE</span>
-        </td>
-      );
+const renderViewCell = (c, avail, crewId, dayIdx) => {
+  const hasShift = !!(c && !c.free && c.inicio && c.fin);
+  const swapCls = getSwapCellClass(crewId, dayIdx, hasShift);
+
+  const handleClick = async () => {
+    if (!swapMode || !hasShift) return;
+
+    // 🔹 Si ya hay origen y vuelvo a hacer click en el mismo turno A → deseleccionar
+    if (
+      swapSource &&
+      swapSource.uid === crewId &&
+      swapSource.dayIdx === dayIdx
+    ) {
+      setSwapSource(null);
+      setSwapCandidates([]);
+      return;
     }
-    if(c?.inicio && c?.fin){
-      return (
-        <td className="tile tile--shift">
-          <span className="time-row">{c.inicio} — {c.fin}</span>
-          {c?.id && (
-            <button
-              type="button"
-              className="corner-id"
-              title={`Turno ID: ${c.id}`}
-            >
-              i
-            </button>
-          )}
-        </td>
-      );
+
+    const fechaA = fmtYMD(weekDates[dayIdx]);
+
+    // Primera selección: definimos origen y pedimos candidatos al backend
+    if (!swapSource) {
+      if (!c.id) {
+        alert('Solo puedes intercambiar turnos que ya estén guardados en la base de datos.');
+        return;
+      }
+
+      try {
+        const payload = {
+          usuario_id: crewId,
+          turno_id: c.id,
+          fecha: fechaA,
+          hora_inicio: c.inicio,
+          hora_fin: c.fin
+        };
+
+        const { data } = await recomendarIntercambio(payload);
+        const swapsRaw = Array.isArray(data?.swaps) ? data.swaps : [];
+        const swaps = swapsRaw.filter(r => r.tipo === 'swap');
+
+        if (!swaps.length) {
+          alert('No se encontraron candidatos de intercambio para este turno.');
+          return;
+        }
+
+        const uiCandidates = [];
+        swaps.forEach(r => {
+          const tB = getTurnoB(r);
+          const idxB = weekDates.findIndex(d => fmtYMD(d) === tB.fechaB);
+          if (idxB < 0) return; // fuera de la semana visible
+          uiCandidates.push({
+            ...r,
+            uid: r.usuario_id,
+            dayIdx: idxB
+          });
+        });
+
+        if (!uiCandidates.length) {
+          alert('Los candidatos encontrados están fuera de la semana visible en la planilla.');
+          return;
+        }
+
+        setSwapSource({
+          uid: crewId,
+          dayIdx,
+          turno: c,
+          fecha: fechaA,
+          hora_inicio: c.inicio,
+          hora_fin: c.fin,
+          turno_id: c.id
+        });
+        setSwapCandidates(uiCandidates);
+      } catch (e) {
+        console.error(e);
+        alert('No se pudieron obtener opciones de intercambio para este turno.');
+      }
+      return;
     }
-    if(avail){
-      return (
-        <td className="tile tile--disp">
-          <span className="time-row">Disp {avail.inicio} — {avail.fin}</span>
-        </td>
-      );
-    }
+
+    // Segunda selección: sólo se acepta si es candidato válido
+    const cand = swapCandidates.find(
+      cand => cand.uid === crewId && cand.dayIdx === dayIdx
+    );
+    if (!cand) return;
+
+    await handleConfirmSwap(swapSource, cand);
+  };
+
+  if (c?.free) {
     return (
-      <td className="tile tile--na">
-        <span className="label">No disponible</span>
+      <td className={`tile tile--free${swapCls}`}>
+        <span className="time-row">LIBRE</span>
       </td>
     );
-  };
+  }
+  if (hasShift) {
+    return (
+      <td
+        className={`tile tile--shift${swapCls}`}
+        onClick={handleClick}
+      >
+        <span className="time-row">{c.inicio} — {c.fin}</span>
+        {c?.id && (
+          <button
+            type="button"
+            className="corner-id"
+            title={`Turno ID: ${c.id}`}
+          >
+            i
+          </button>
+        )}
+      </td>
+    );
+  }
+  if (avail) {
+    return (
+      <td className={`tile tile--disp${swapCls}`}>
+        <span className="time-row">Disp {avail.inicio} — {avail.fin}</span>
+      </td>
+    );
+  }
+  return (
+    <td className={`tile tile--na${swapCls}`}>
+      <span className="label">No disponible</span>
+    </td>
+  );
+};
+
 
   const renderEditCell = (crewId, i, avail, t) => {
     if(t?.free){
@@ -647,7 +948,7 @@ export default function PlanillaTurnosManual(){
   /* ========= RENDER PRINCIPAL ========= */
 
   return (
-    <div className="planilla-screen">
+    <div className={`planilla-screen ${swapMode ? 'swap-active' : ''}`}>
       <div className="poster-head">
         <h1>HORARIO LABORAL</h1>
         <p className="sub">Cobertura semanal</p>
@@ -671,6 +972,13 @@ export default function PlanillaTurnosManual(){
           </button>
           <button className="bk-btn" onClick={handleToggleWeekFree}>
             Asignar / Quitar días libres
+          </button>
+          <button
+            className={`bk-btn ${swapMode ? 'primary' : ''}`}
+            onClick={handleToggleSwapMode}
+            disabled={editing}
+          >
+            {swapMode ? 'Cancelar intercambio' : 'Intercambio'}
           </button>
         </div>
         <div className="right">
@@ -730,8 +1038,9 @@ export default function PlanillaTurnosManual(){
                   const fecha=fmtYMD(d);
 
                   if(leaves[c.id]?.[fecha]){
+                    const swapCls = getSwapCellClass(c.id, i, false);
                     return (
-                      <td key={i} className="tile tile--warn">
+                      <td key={i} className={`tile tile--warn${swapCls}`}>
                         <span className="label">LICENCIA</span>
                       </td>
                     );
@@ -739,8 +1048,9 @@ export default function PlanillaTurnosManual(){
 
                   const tipo=benefits[c.id]?.[fecha];
                   if(tipo){
+                    const swapCls = getSwapCellClass(c.id, i, false);
                     return (
-                      <td key={i} className="tile tile--benefit">
+                      <td key={i} className={`tile tile--benefit${swapCls}`}>
                         <span className="label">{tipo}</span>
                       </td>
                     );
@@ -751,24 +1061,24 @@ export default function PlanillaTurnosManual(){
 
                   return editing
                     ? <React.Fragment key={i}>{renderEditCell(c.id,i,avail,t)}</React.Fragment>
-                    : <React.Fragment key={i}>{renderViewCell(t,avail)}</React.Fragment>;
+                    : <React.Fragment key={i}>{renderViewCell(t,avail,c.id,i)}</React.Fragment>;
                 })}
 
                 {/* Celda de advertencias (sin encabezado visible) */}
                 <td className="warn-cell">
-  {warningMap[c.id]?.length > 0 && (
-    <span
-      className="warn-icon"
-      title={
-        warningMap[c.id]
-          .map(r => `Más de 6 días consecutivos trabajados entre ${fmtDMY(r.start)} y ${fmtDMY(r.end)}`)
-          .join('\n')
-      }
-    >
-      !
-    </span>
-  )}
-</td>
+                  {warningMap[c.id]?.length > 0 && (
+                    <span
+                      className="warn-icon"
+                      title={
+                        warningMap[c.id]
+                          .map(r => `Más de 6 días consecutivos trabajados entre ${fmtDMY(r.start)} y ${fmtDMY(r.end)}`)
+                          .join('\n')
+                      }
+                    >
+                      !
+                    </span>
+                  )}
+                </td>
 
               </tr>
             ))}
