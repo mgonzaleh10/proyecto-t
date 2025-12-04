@@ -26,7 +26,7 @@
 ================================================== */
 .planilla-screen{
   min-height:100vh;
-  background: transparent !important;   /* <<< clave para que se vea el mismo café */
+  background: transparent !important;
   padding:12px;
   color:#2b170c;
   font-family: Nunito, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -234,6 +234,7 @@
   box-shadow:inset 0 2px 0 rgba(255,255,255,.28), 0 6px 12px rgba(0,0,0,.18);
   padding:var(--tile-pad);
   color:#1d120c;
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
 }
 .tile .hh{
   display:block;
@@ -478,7 +479,6 @@ button.mini.ghost{
   padding: 0;
 }
 
-/* Ícono redondo de advertencia */
 /* Ícono redondo de advertencia: círculo rojo, fondo blanco, "!" rojo */
 .warn-icon{
   width:20px;
@@ -500,3 +500,54 @@ button.mini.ghost{
   filter:brightness(1.05);
 }
 
+/* ====== MODO INTERCAMBIO EN PLANILLA ====== */
+
+.planilla-screen.swap-active{
+  cursor: default;
+}
+
+/* Cursor de mano solo en lo que realmente es clicable */
+.planilla-screen.swap-active .tile--clickable,
+.planilla-screen.swap-active .tile--source,
+.planilla-screen.swap-active .tile--candidate{
+  cursor: pointer;
+}
+
+/* Tile origen A claramente seleccionado */
+.tile--source{
+  transform: translateY(-2px) scale(1.02);
+  box-shadow:
+    0 0 0 3px #ffffff,
+    0 0 0 5px #e0a72b,
+    0 10px 22px rgba(0,0,0,.4);
+}
+
+/* Tiles candidatos B */
+.tile--candidate{
+  box-shadow:
+    0 0 0 3px #e0a72b,
+    0 8px 18px rgba(0,0,0,.35);
+}
+
+/* Tiles clicables en la primera fase (antes de elegir origen) */
+.tile--clickable{
+  box-shadow:
+    inset 0 2px 0 rgba(255,255,255,.28),
+    0 6px 12px rgba(0,0,0,.2);
+}
+
+/* Efecto hover suave cuando estamos en modo intercambio */
+.planilla-screen.swap-active .tile--clickable:hover,
+.planilla-screen.swap-active .tile--source:hover,
+.planilla-screen.swap-active .tile--candidate:hover{
+  transform: translateY(-3px) scale(1.03);
+  box-shadow:
+    0 0 0 3px #e0a72b,
+    0 10px 22px rgba(0,0,0,.45);
+}
+
+.tile--disabled{
+  opacity:.35;
+  filter:blur(0.6px) grayscale(0.1);
+  pointer-events:none;
+}
