@@ -31,9 +31,10 @@
   background-image: none !important;
 }
 
-/* ====== Hero tipo “poster” (como Beneficios/Planilla Manual) ====== */
+/* ====== Hero tipo “poster” ====== */
 .lic-hero{
   max-width:1700px;
+  width:100%;
   margin:0 auto 18px;
 
   border:3px solid #6b2a18;
@@ -46,6 +47,9 @@
   display:flex;
   align-items:center;
   justify-content:center;
+
+  /* ❗ Para que el borde cuente dentro del ancho y se alinee con lo de abajo */
+  box-sizing:border-box;
 }
 
 .lic-hero__inner{
@@ -76,6 +80,9 @@
   margin: 18px auto 28px;
   display:grid;
   gap:16px;
+
+  /* por consistencia, mismo modelo de caja */
+  box-sizing:border-box;
 }
 
 /* Alerts */
@@ -192,7 +199,8 @@
 }
 .lic-table thead th{
   position:sticky; top:0; z-index:2;
-  background: linear-gradient(180deg, var(--bk-brown-500), #8f4929);
+  /* café en vez de naranjo */
+  background: linear-gradient(180deg, var(--bk-brown-800), var(--bk-brown-900));
   color:#fff;
   text-align:left;
   padding:12px 12px;
@@ -203,7 +211,10 @@
 .lic-table thead th:last-child{ border-right:none; }
 
 .lic-table tbody tr{ transition: background .12s ease, box-shadow .12s ease; }
-.lic-table tbody tr:hover{ background:#fff9ef; box-shadow: inset 0 0 0 9999px rgba(242,177,47,.06); }
+.lic-table tbody tr:hover{
+  background:#fff9ef;
+  box-shadow: inset 0 0 0 9999px rgba(138,66,33,.06);
+}
 
 .lic-table tbody td{
   background:#fffdf8;
