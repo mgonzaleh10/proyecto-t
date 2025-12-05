@@ -12,7 +12,7 @@
   --shadow-inset: inset 0 2px 0 rgba(255,255,255,.08);
 }
 
-/* ===== Lienzo tipo Planilla ===== */
+/* ===== Lienzo tipo Planilla (contenedor único de 1700px) ===== */
 .intercambio-page.bk-wrap{
   min-height:100vh;
   background:
@@ -21,7 +21,12 @@
   padding:16px 32px;
   color:#2b170c;
   font-family: Nunito, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
+  /* Contenedor centrado y ancho único para TODO el contenido */
+  max-width:1700px;
+  margin:0 auto;
   width:100%;
+  box-sizing:border-box;
 }
 
 /* ===== Cabecera (poster) ===== */
@@ -31,9 +36,9 @@
   border-radius:18px;
   padding:12px 14px 8px;
   box-shadow: var(--shadow-inset), var(--shadow-outer);
-  margin: 0 auto 10px;
-  max-width:1700px;
+  margin: 0 0 10px;  /* ya no usamos auto porque el contenedor ya está centrado */
 }
+
 .intercambio-page .disp-title{
   margin:0; text-align:center;
   font-family:"Alfa Slab One", serif;
@@ -47,10 +52,9 @@
   text-align:center; margin:2px 0 0; color:#f8e7cf; opacity:.9; font-weight:900;
 }
 
-/* ===== Sección (título barra) ===== */
+/* ===== Sección (título barra + contenido) ===== */
 .intercambio-page .bk-section{
-  max-width:1700px;
-  margin: 12px auto 18px;
+  margin: 12px 0 18px;   /* mismo ancho que el contenedor padre */
 }
 .intercambio-page .sec-title{
   margin: 0 0 8px;
@@ -185,8 +189,7 @@
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:10px;
-  max-width:1700px;
-  margin: 0 auto;
+  margin: 0;          /* ahora hereda el ancho del contenedor padre */
 }
 @media (max-width:1024px){
   .intercambio-page .cards{
