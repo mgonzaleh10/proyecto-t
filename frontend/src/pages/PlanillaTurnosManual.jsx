@@ -19,7 +19,7 @@ import { obtenerLicencias } from '../api/licencias';
 import {
   recomendarIntercambio,
   confirmarIntercambio
-} from '../api/intercambios.jsx';
+} from '../api/intercambios.js';
 
 import './PlanillaTurnosManual.css';
 

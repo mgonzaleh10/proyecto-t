@@ -1,25 +1,21 @@
-import api from "./client";
+import client from './client';
 
-// Crear licencia
 export const crearLicencia = async (licencia) => {
-  const res = await api.post("/licencias", licencia);
+  const res = await client.post('/licencias', licencia);
   return res.data;
 };
 
-// Listar todas
 export const obtenerLicencias = async () => {
-  const res = await api.get("/licencias");
+  const res = await client.get('/licencias');
   return res.data;
 };
 
-// Listar por usuario
 export const obtenerLicenciasPorUsuario = async (usuarioId) => {
-  const res = await api.get(`/licencias/usuario/${usuarioId}`);
+  const res = await client.get(`/licencias/usuario/${usuarioId}`);
   return res.data;
 };
 
-// Eliminar licencia
 export const eliminarLicencia = async (id) => {
-  const res = await api.delete(`/licencias/${id}`);
+  const res = await client.delete(`/licencias/${id}`);
   return res.data;
 };
