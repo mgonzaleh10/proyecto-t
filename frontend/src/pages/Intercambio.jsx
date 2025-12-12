@@ -7,7 +7,7 @@ import {
   recomendarIntercambio,
   confirmarIntercambio,
   listarIntercambios
-} from '../api/intercambios.jsx';
+} from '../api/intercambios.js';
 import { getTurnosPorFecha } from '../api/turnos';
 
 export default function Intercambio() {

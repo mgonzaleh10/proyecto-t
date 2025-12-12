@@ -1,7 +1,6 @@
-// src/api/turnos.jsx
-import client from './client.jsx';
+import client from './client';
 
-// ===== CRUD turnos “clásico” =====
+// ===== CRUD turnos =====
 export const getTurnos = () => client.get('/turnos');
 export const getTurnosPorFecha = (fecha) => client.get(`/turnos/fecha/${fecha}`);
 export const crearTurno = (payload) => client.post('/turnos', payload);
@@ -13,7 +12,6 @@ export const eliminarTodosTurnos = () => client.delete('/turnos');
 export const generarPython = (fechaInicio) =>
   client.post('/turnos/generar-python', { fechaInicio });
 
-// ⬅️ IMPORTANTE: pasamos fechaInicio para anclar la matriz 1..7
 export const previewPython = (fechaInicio) =>
   client.get('/turnos/preview-python', { params: { fechaInicio } });
 
