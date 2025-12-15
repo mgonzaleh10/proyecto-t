@@ -1,0 +1,63 @@
+services:
+  db:
+    image: postgres:16
+    container_name: bk-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "0426"
+      POSTGRES_DB: proyecto
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d proyecto"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: bk-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: "0426"
+      DB_NAME: proyecto
+
+      PYTHON_BIN: python3
+      NB_PATH: /app/python/modelo-12.ipynb
+      NB_OUT_DIR: /app/python/out
+      IN_XLSX: /app/python/Datos_v8.xlsx
+      INPUT_EXCEL_PATH: /app/python/Datos_v8.xlsx
+      EXCEL_TRABAJADORES_PATH: /app/python/Datos_v8.xlsx
+    volumes:
+      - ./Backend/python:/app/python
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bk-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  pgdata:
