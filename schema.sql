@@ -1,5 +1,3 @@
-CREATE DATABASE proyecto;
-
 ---------------------------------------------
 --------- BASE DE DATOS ACTUALIZADA ---------
 ---------------------------------------------
@@ -74,10 +72,6 @@ CREATE TABLE licencias (
 
 -----------------------
 
-
-
-
-
 CREATE TABLE intercambios_turnos (
   id SERIAL PRIMARY KEY,
   turno_origen_id INT REFERENCES turnos(id) ON DELETE CASCADE,
@@ -91,34 +85,6 @@ CREATE TABLE intercambios_turnos (
 );
 
 ----------------------------
-
-SELECT * FROM usuarios;
-SELECT * FROM disponibilidades;
-SELECT * FROM turnos;
-SELECT * FROM beneficios;
-SELECT * FROM licencias;
-SELECT * FROM intercambios_turnos;
-
--- Vacía y reinicia la tabla de disponibilidades
-TRUNCATE disponibilidades RESTART IDENTITY CASCADE;
-
--- Vacía y reinicia la tabla de beneficios
-TRUNCATE beneficios RESTART IDENTITY CASCADE;
-
--- Vacía y reinicia la tabla de turnos
-TRUNCATE turnos RESTART IDENTITY CASCADE;
-
-
--- Vacía y reinicia la tabla de usuarios
-TRUNCATE usuarios RESTART IDENTITY CASCADE;
-
--- Vacía y reinicia la tabla de intercambios_turnos
-TRUNCATE intercambios_turnos RESTART IDENTITY CASCADE;
-
-DELETE FROM intercambios_turnos;
-
-DROP TABLE usuarios
-
 
 
 
