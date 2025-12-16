@@ -1,0 +1,28 @@
+services:
+  backend:
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    container_name: bk-backend
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    env_file:
+      - ./Backend/.env
+    volumes:
+      # Mapeo vital: Carpeta Host (Servidor) : Carpeta Contenedor (Interna)
+      - ./Backend/python:/app/python
+    # No exponemos puertos, Nginx se comunica internamente
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bk-frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      # [cite_start]Puerto Apache UBB [cite: 8] -> Puerto Nginx
+      - "1549:80"
