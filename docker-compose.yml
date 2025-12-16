@@ -25,7 +25,8 @@ services:
     container_name: bk-backend
     restart: unless-stopped
     environment:
-      NODE_ENV: production
+
+      NODE_ENV: development
       PORT: 3000
 
       DB_HOST: db
@@ -40,6 +41,12 @@ services:
       IN_XLSX: /app/python/Datos_v8.xlsx
       INPUT_EXCEL_PATH: /app/python/Datos_v8.xlsx
       EXCEL_TRABAJADORES_PATH: /app/python/Datos_v8.xlsx
+
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_USER: moisestrikerop7@gmail.com
+      SMTP_PASS: mtelrzfmaguqwuso
+
     volumes:
       - ./Backend/python:/app/python
     depends_on:
